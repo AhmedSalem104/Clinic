@@ -1,10 +1,12 @@
 const path = require('node:path');
+const os = require('node:os');
 const dotenv = require('dotenv');
 
 dotenv.config();
 // Appointment and queue calculations use the clinic's local wall-clock time.
-// Override TZ in deployment when the clinic operates in another timezone.
-process.env.TZ = process.env.TZ || 'Africa/Cairo';
+// CLINIC_TIME_ZONE is used instead of relying on the host's timezone.
+const clinicTimeZone = process.env.CLINIC_TIME_ZONE || process.env.TZ || 'Africa/Cairo';
+process.env.TZ = clinicTimeZone;
 
 const toBoolean = (value, fallback = false) => {
   if (value === undefined) return fallback;
@@ -16,10 +18,20 @@ const toNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const runningOnVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+const configuredUploadDir = process.env.UPLOAD_DIR || 'storage/uploads';
+// Vercel functions can only write to /tmp. Configure durable object storage
+// before enabling production document uploads.
+const uploadDir = runningOnVercel
+  ? path.join(os.tmpdir(), 'clinic-uploads')
+  : path.resolve(process.cwd(), configuredUploadDir);
+
 const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: toNumber(process.env.PORT, 3000),
   appOrigin: process.env.APP_ORIGIN || 'http://localhost:3000',
+  clinicTimeZone,
+  runningOnVercel,
   jwtSecret: process.env.JWT_SECRET || 'development-only-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   cookieSecure: toBoolean(process.env.COOKIE_SECURE, false),
@@ -37,7 +49,7 @@ const env = Object.freeze({
       idleTimeoutMillis: toNumber(process.env.DB_POOL_IDLE_TIMEOUT, 30000)
     }
   },
-  uploadDir: path.resolve(process.cwd(), process.env.UPLOAD_DIR || 'storage/uploads'),
+  uploadDir,
   maxUploadBytes: toNumber(process.env.MAX_UPLOAD_BYTES, 10 * 1024 * 1024),
   logLevel: process.env.LOG_LEVEL || 'info'
 });
