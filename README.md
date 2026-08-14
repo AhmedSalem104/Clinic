@@ -40,3 +40,7 @@
 ## ملاحظات النشر
 
 يعمل Express على Vercel عبر `vercel.json`. Socket.IO يحتاج بيئة تشغيل طويلة الاتصال (VPS/Docker أو مزود WebSocket) في الإنتاج؛ الواجهة تحتوي على fallback آمن لإعادة التحقق عند الحاجة.
+
+## Project documentation
+
+The complete operational and technical guide is available in [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md), including roles, permissions, patient registration without OTP, workflows, Mermaid diagrams, API groups, database design, security, deployment, and troubleshooting.

@@ -66,13 +66,39 @@ BEGIN
     PasswordHash NVARCHAR(255) NOT NULL,
     Role NVARCHAR(30) NOT NULL CONSTRAINT CK_Users_Role CHECK (Role IN (N'owner', N'doctor', N'reception', N'patient')),
     DoctorId INT NULL,
+    PatientId INT NULL,
     IsActive BIT NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT 1,
     LastLoginAt DATETIME2(0) NULL,
     CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSUTCDATETIME(),
     UpdatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Users_UpdatedAt DEFAULT SYSUTCDATETIME(),
     CONSTRAINT UQ_Users_Email UNIQUE (Email),
-    CONSTRAINT FK_Users_Doctors FOREIGN KEY (DoctorId) REFERENCES dbo.Doctors(Id)
+    CONSTRAINT FK_Users_Doctors FOREIGN KEY (DoctorId) REFERENCES dbo.Doctors(Id),
+    CONSTRAINT FK_Users_Patients FOREIGN KEY (PatientId) REFERENCES dbo.Patients(Id)
   );
+END;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'PatientId') IS NULL
+BEGIN
+  ALTER TABLE dbo.Users ADD PatientId INT NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Users_Patients' AND parent_object_id = OBJECT_ID(N'dbo.Users'))
+BEGIN
+  ALTER TABLE dbo.Users ADD CONSTRAINT FK_Users_Patients FOREIGN KEY (PatientId) REFERENCES dbo.Patients(Id);
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_Users_PatientId' AND object_id = OBJECT_ID(N'dbo.Users'))
+BEGIN
+  CREATE UNIQUE INDEX UX_Users_PatientId ON dbo.Users(PatientId) WHERE PatientId IS NOT NULL;
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Users_PatientId' AND object_id = OBJECT_ID(N'dbo.Users'))
+BEGIN
+  CREATE INDEX IX_Users_PatientId ON dbo.Users(PatientId) INCLUDE (Role, IsActive);
 END;
 GO
 

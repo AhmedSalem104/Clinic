@@ -12,6 +12,7 @@ const outlet = document.querySelector('#page-content');
 const overlay = document.querySelector('#mobile-overlay');
 
 const navSections = [
+  { title: 'حساب المريضة', items: [{ route:'/patient-portal', label:'مواعيدي ومتابعة الدور', icon:'calendar', roles:['patient'] }] },
   { title: 'نظرة عامة', items: [{ route:'/dashboard', label:'لوحة التحكم', icon:'grid' }] },
   { title: 'المرضى', items: [{ route:'/patients', label:'كل المرضى', icon:'users', permission:'patients:view_all' }, { route:'/patients/new', label:'إضافة مريضة', icon:'plus', permission:'patients:manage' }, { route:'/assignments', label:'التخصيصات', icon:'users', permission:'patients:manage' }] },
   { title: 'الحجوزات', items: [{ route:'/appointments', label:'التقويم والحجوزات', icon:'calendar', permission:'appointments:manage' }, { route:'/appointments/new', label:'حجز جديد', icon:'plus', permission:'appointments:manage' }, { route:'/queue', label:'الطابور', icon:'clock', permission:'queue:manage' }] },
@@ -23,7 +24,9 @@ const navSections = [
 const closeSidebar = () => { sidebar.classList.remove('open'); overlay.classList.add('hidden'); };
 const openSidebar = () => { sidebar.classList.add('open'); overlay.classList.remove('hidden'); };
 
-const visibleItem = (user, item) => (!item.ownerOnly || user.role === 'owner') && (!item.roles || item.roles.includes(user.role)) && (!item.permission || can(user, item.permission) || (item.permission === 'patients:view_all' && can(user, 'patients:view_assigned')));
+const visibleItem = (user, item) => user.role === 'patient'
+  ? Boolean(item.roles?.includes('patient'))
+  : (!item.ownerOnly || user.role === 'owner') && (!item.roles || item.roles.includes(user.role)) && (!item.permission || can(user, item.permission) || (item.permission === 'patients:view_all' && can(user, 'patients:view_assigned')));
 
 const renderSidebar = (user, currentPath = window.location.pathname) => {
   const sections = navSections.map((section) => {
@@ -45,6 +48,11 @@ const renderTopbar = (user) => {
 
 const renderLogin = () => {
   loginView.innerHTML = `<div class="login-panel"><div class="login-visual"><div class="max-w-lg"><div class="flex items-center gap-3"><div class="brand-mark">+</div><span class="text-sm font-bold text-slate-900">عيادتي</span></div><h1 class="mt-12 text-4xl font-bold leading-tight text-slate-900">تشغيل هادئ وواضح<br><span class="text-blue-600">لكل رحلة مريضة.</span></h1><p class="mt-5 max-w-md text-sm leading-7 text-slate-500">إدارة الحجوزات والطابور والسجل الطبي بصلاحيات واضحة وبيانات قابلة للمتابعة.</p><div class="mt-12 grid grid-cols-3 gap-3 text-xs text-slate-500"><div class="rounded-xl border border-blue-100 bg-white/70 p-3">طابور لحظي</div><div class="rounded-xl border border-blue-100 bg-white/70 p-3">سجل موحد</div><div class="rounded-xl border border-blue-100 bg-white/70 p-3">صلاحيات آمنة</div></div></div></div><div class="flex items-center justify-center bg-white"><div class="login-card"><div class="mb-8"><div class="text-2xl font-bold text-slate-900">تسجيل الدخول</div><p class="mt-2 text-sm text-slate-500">أدخل بيانات حساب العيادة للمتابعة.</p></div><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="owner@clinic.local" required /></div><div><div class="flex items-center justify-between"><label class="form-label mb-0" for="login-password">كلمة المرور</label><span class="text-[11px] text-slate-400">جلسة آمنة</span></div><input class="input mt-2" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="btn btn-primary w-full" type="submit">دخول إلى النظام</button></form><div class="mt-7 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">للتجربة المحلية بعد تشغيل seed: <span class="font-semibold">owner@clinic.local</span> / <span class="font-semibold">ChangeMe!123</span></div></div></div></div>`;
+  const patientRegistrationLink = document.createElement('a');
+  patientRegistrationLink.href = '/patient-register.html';
+  patientRegistrationLink.className = 'mt-4 block text-center text-xs font-semibold text-blue-600 hover:underline';
+  patientRegistrationLink.textContent = 'إنشاء حساب مريضة جديد';
+  loginView.querySelector('.login-card')?.append(patientRegistrationLink);
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
   document.querySelector('#login-form').addEventListener('submit', async (event) => {
@@ -62,8 +70,10 @@ const renderLogin = () => {
 let router;
 const bootAuthenticated = async () => {
   const user = auth.user();
+  if (user.role === 'patient' && !window.location.pathname.startsWith('/patient-portal')) window.history.replaceState({}, '', '/patient-portal');
   loginView.classList.add('hidden'); appView.classList.remove('hidden');
   renderSidebar(user); renderTopbar(user);
+  if (user.role === 'patient') document.querySelector('[data-route="/notifications"]')?.remove();
   router = router || createRouter({ outlet, onRoute: (path) => { renderSidebar(user, path); } });
   await router.render();
   if (window.io && !window.clinicSocket) {

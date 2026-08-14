@@ -1,4 +1,5 @@
 const routes = [
+  { match: /^\/patient-portal\/?$/, load: () => import('../pages/patient-portal.js') },
   { match: /^\/dashboard\/?$/, load: () => import('../pages/dashboard.js') },
   { match: /^\/patients\/?$/, load: () => import('../pages/patients.js') },
   { match: /^\/patients\/new\/?$/, load: () => import('../pages/patient-form.js') },

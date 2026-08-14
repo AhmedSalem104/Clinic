@@ -9,7 +9,8 @@ const signUser = (user) => jwt.sign({
   fullName: user.FullName,
   email: user.Email,
   role: user.Role,
-  doctorId: user.DoctorId || null
+  doctorId: user.DoctorId || null,
+  patientId: user.PatientId || null
 }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 
 const login = async ({ email, password }) => {
@@ -18,13 +19,13 @@ const login = async ({ email, password }) => {
     throw new AppError('بيانات الدخول غير صحيحة.', 401, 'INVALID_CREDENTIALS');
   }
   await repository.touchLastLogin(user.Id);
-  return { token: signUser(user), user: { id: user.Id, fullName: user.FullName, email: user.Email, role: user.Role, doctorId: user.DoctorId } };
+  return { token: signUser(user), user: { id: user.Id, fullName: user.FullName, email: user.Email, role: user.Role, doctorId: user.DoctorId, patientId: user.PatientId } };
 };
 
 const currentUser = async (id) => {
   const user = await repository.findById(id);
   if (!user || !user.IsActive) throw new AppError('المستخدم غير متاح.', 401, 'INVALID_SESSION');
-  return { id: user.Id, fullName: user.FullName, email: user.Email, role: user.Role, doctorId: user.DoctorId };
+  return { id: user.Id, fullName: user.FullName, email: user.Email, role: user.Role, doctorId: user.DoctorId, patientId: user.PatientId };
 };
 
 module.exports = { login, currentUser, signUser };

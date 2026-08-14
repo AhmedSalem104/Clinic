@@ -20,7 +20,7 @@
       "dest": "/public/index.html"
     },
     {
-      "src": "/(index\\.html|queue-tracking\\.html)$",
+      "src": "/(index\\.html|queue-tracking\\.html|patient-register\\.html)$",
       "dest": "/public/$1"
     },
     {

@@ -3,7 +3,7 @@ const { sql } = require('../../db/connection');
 
 const findByEmail = async (email) => {
   const result = await query(`
-    SELECT TOP 1 Id, FullName, Email, PasswordHash, Role, DoctorId, IsActive
+    SELECT TOP 1 Id, FullName, Email, PasswordHash, Role, DoctorId, PatientId, IsActive
     FROM Users WHERE Email = @email
   `, (request) => request.input('email', sql.NVarChar(255), email));
   return result.recordset[0] || null;
@@ -11,7 +11,7 @@ const findByEmail = async (email) => {
 
 const findById = async (id) => {
   const result = await query(`
-    SELECT TOP 1 Id, FullName, Email, Role, DoctorId, IsActive, LastLoginAt, CreatedAt
+    SELECT TOP 1 Id, FullName, Email, Role, DoctorId, PatientId, IsActive, LastLoginAt, CreatedAt
     FROM Users WHERE Id = @id
   `, (request) => request.input('id', sql.Int, id));
   return result.recordset[0] || null;
@@ -21,7 +21,7 @@ const touchLastLogin = (id) => query('UPDATE Users SET LastLoginAt = SYSUTCDATET
 
 const list = async ({ pageSize, offset }) => {
   const result = await query(`
-    SELECT u.Id, u.FullName, u.Email, u.Role, u.DoctorId, d.FullName AS DoctorName, u.IsActive, u.LastLoginAt, u.CreatedAt
+    SELECT u.Id, u.FullName, u.Email, u.Role, u.DoctorId, u.PatientId, d.FullName AS DoctorName, u.IsActive, u.LastLoginAt, u.CreatedAt
     FROM Users u LEFT JOIN Doctors d ON d.Id = u.DoctorId
     ORDER BY u.CreatedAt DESC OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
     SELECT COUNT_BIG(1) AS Total FROM Users;
@@ -29,16 +29,17 @@ const list = async ({ pageSize, offset }) => {
   return { rows: result.recordsets[0], total: Number(result.recordsets[1][0].Total) };
 };
 
-const createUser = async ({ fullName, email, passwordHash, role, doctorId }) => {
+const createUser = async ({ fullName, email, passwordHash, role, doctorId, patientId }) => {
   const result = await query(`
-    INSERT INTO Users (FullName, Email, PasswordHash, Role, DoctorId)
-    OUTPUT INSERTED.Id, INSERTED.FullName, INSERTED.Email, INSERTED.Role, INSERTED.DoctorId, INSERTED.IsActive
-    VALUES (@fullName, @email, @passwordHash, @role, @doctorId)
+    INSERT INTO Users (FullName, Email, PasswordHash, Role, DoctorId, PatientId)
+    OUTPUT INSERTED.Id, INSERTED.FullName, INSERTED.Email, INSERTED.Role, INSERTED.DoctorId, INSERTED.PatientId, INSERTED.IsActive
+    VALUES (@fullName, @email, @passwordHash, @role, @doctorId, @patientId)
   `, (request) => request.input('fullName', sql.NVarChar(160), fullName)
     .input('email', sql.NVarChar(255), email)
     .input('passwordHash', sql.NVarChar(255), passwordHash)
     .input('role', sql.NVarChar(30), role)
-    .input('doctorId', sql.Int, doctorId || null));
+    .input('doctorId', sql.Int, doctorId || null)
+    .input('patientId', sql.Int, patientId || null));
   return result.recordset[0];
 };
 
