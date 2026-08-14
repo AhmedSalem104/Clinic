@@ -5,7 +5,12 @@ const { attachRealtime } = require('./src/realtime/socket');
 const { logger } = require('./src/config/logger');
 
 const server = http.createServer(app);
-attachRealtime(server);
+// Vercel invokes the exported Express handler directly. Persistent Socket.IO
+// connections require a long-lived Node process, so attach realtime only when
+// the app is running on a regular server (local/VPS/Docker).
+if (!env.runningOnVercel) {
+  attachRealtime(server);
+}
 
 if (require.main === module) {
   server.listen(env.port, () => {
@@ -13,4 +18,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server };
+// @vercel/node requires the entry module to export a handler or server.
+// Exporting the Express app keeps the same REST API on serverless and local
+// deployments while the HTTP server above remains responsible for local runs.
+module.exports = app;
