@@ -24,7 +24,7 @@
 | **Clinic Owner** | إدارة وتشغيل العيادة بالكامل | كل المرضى، الأطباء، الخدمات، الأسعار، الجداول، الحجوزات، الطابور، السجل الطبي، التقارير، المستخدمون، الإعدادات وسجل التدقيق | لا توجد قيود تشغيلية داخل النطاق الحالي |
 | **Doctor** | اتخاذ القرار الطبي وتوثيق الزيارة | المرضى والحالات المعيّنة له، الزيارات، الحمل، الأدوية، الحساسية، التحاليل، السونار، المستندات، التطور والتقارير المسموحة | مرضى غير معيّنين له، وإدارة المستخدمين والإعدادات التشغيلية |
 | **Reception** | إدارة الاستقبال والحجز والطابور | البحث وإنشاء مريضة، الحجز، إعادة الجدولة، الإلغاء، Walk-in، Check-in، ترتيب الطابور، No Show، Pause/Resume، الخدمات والأسعار | Diagnosis، Clinical Notes، تفاصيل الحمل، الأدوية، الحساسية التفصيلية، التقارير الطبية |
-| **Patient** | متابعة تعاملها مع العيادة | إنشاء الحساب بدون OTP، تسجيل الدخول، رؤية Patient ID والبيانات التشغيلية ومواعيدها، فتح متابعة الدور | كل البيانات الطبية، Dashboard العيادة، مرضى آخرون، Queue Management، المستخدمون والتقارير الطبية |
+| **Patient** | متابعة تعاملها مع العيادة والحجز الذاتي | إنشاء الحساب بدون OTP، تسجيل الدخول، رؤية Patient ID والبيانات التشغيلية، حجز موعد لنفسها من شاشة الحجز المشتركة، رؤية مواعيدها، فتح متابعة الدور | كل البيانات الطبية، Dashboard العيادة، مرضى آخرون، Queue Management، المستخدمون، التقارير الطبية، والحجز باسم مريضة أخرى |
 
 ### مصفوفة الصلاحيات الأساسية
 
@@ -196,11 +196,25 @@ flowchart TD
 
 1. تسجيل الدخول من <code>/</code>.
 2. الانتقال تلقائيًا إلى **مواعيدي ومتابعة الدور**.
-3. مراجعة Patient ID والبيانات التشغيلية.
-4. مراجعة الموعد والطبيب والخدمة والحالة.
-5. فتح رابط متابعة الدور إذا كان متاحًا.
+3. الضغط على **Book a new appointment**.
+4. اختيار الطبيب والخدمة والتاريخ والـslot المتاح.
+5. مراجعة السعر ثم تأكيد الحجز.
+6. مراجعة رقم الموعد ورابط متابعة الدور من الـPortal.
 
-الحجز الذاتي الكامل من حساب المريضة ليس مفتوحًا في النسخة الحالية؛ موظف الاستقبال ينشئ الحجز، والمريضة تتابع حالته. يمكن إضافة Self-booking لاحقًا عبر API منفصل بصلاحيات وقواعد slots واضحة.
+### 4.7 Patient Self-booking — نفس شاشة الحجز
+
+```mermaid
+flowchart TD
+  A[Patient Login] --> B[Patient Portal]
+  B --> C[New Appointment]
+  C --> D[Doctor and Service]
+  D --> E[Date and Available Slot]
+  E --> F[Price Review]
+  F --> G[Confirm]
+  G --> H[Appointment and Queue Link]
+```
+
+المريضة تستخدم نفس Route <code>/appointments/new</code> ونفس Endpoint <code>POST /api/appointments</code> المستخدمين بواسطة الـReception. الواجهة تخفي اختيار مريضة أخرى وملاحظات التشغيل، وتثبت الحساب الحالي تلقائيًا. الـBackend يفرض <code>patientId</code> من الـJWT، ويسجل <code>BookingSource=online</code>، ويطبق نفس فحص الـAvailability والـDouble Booking والسعر والمعاملة.
 
 ## 5. الشاشات والـRoutes
 
@@ -214,7 +228,7 @@ flowchart TD
 | <code>/patients/:id</code> | ملف المريضة | Owner / Doctor / Reception ببيانات منقحة |
 | <code>/assignments</code> | ربط المريضة بالطبيب والحالة بالطبيب | Owner / Reception بصلاحية الإدارة |
 | <code>/appointments</code> | التقويم والحجوزات | Owner / Doctor / Reception |
-| <code>/appointments/new</code> | New Booking / Phone / Walk-in | Owner / Reception |
+| <code>/appointments/new</code> | New Booking / Phone / Walk-in / Patient Self-booking | Owner / Reception / Patient لحسابها فقط |
 | <code>/queue</code> | إدارة الطابور والتوقف | Owner / Reception |
 | <code>/doctors</code> | الأطباء وخدماتهم | Owner |
 | <code>/schedules</code> | جداول الأطباء والاستثناءات | Owner / Doctor حسب الصلاحية |
@@ -495,6 +509,7 @@ src/
 | <code>POST</code> | <code>/api/auth/logout</code> | Optional | إنهاء الجلسة |
 | <code>POST</code> | <code>/api/patient-portal/register</code> | Public + rate limit | إنشاء Patient + User في Transaction، بدون OTP |
 | <code>GET</code> | <code>/api/patient-portal/summary</code> | Patient فقط | بيانات المريضة التشغيلية ومواعيدها |
+| <code>POST</code> | <code>/api/appointments</code> | Owner / Reception / Patient لحسابها فقط | إنشاء حجز من شاشة الحجز المشتركة |
 | <code>GET</code> | <code>/api/public/queue/:token</code> | Public token | حالة الدور، عدد من أمامها، والوقت المتوقع |
 
 ### مجموعات الـAPI الأخرى

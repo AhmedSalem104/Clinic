@@ -10,7 +10,17 @@ const dateKey = (value) => clinicDateKey(value || Date.now());
 
 const create = async (body, req) => {
   try {
-    const appointment = await repository.create({ ...body, createdBy: req.user.id });
+    const isPatient = req.user?.role === 'patient';
+    if (isPatient && !req.user.patientId) throw new AppError('This account is not linked to a patient record.', 403, 'PATIENT_ACCOUNT_UNLINKED');
+    const payload = {
+      ...body,
+      patientId: isPatient ? req.user.patientId : body.patientId,
+      bookingSource: isPatient ? 'online' : body.bookingSource,
+      notes: isPatient ? null : body.notes,
+      createdBy: req.user.id
+    };
+    if (isPatient && new Date(payload.startAt).getTime() <= Date.now()) throw new AppError('Patient self-booking must be for a future time.', 409, 'PATIENT_BOOKING_IN_PAST');
+    const appointment = await repository.create(payload);
     if (appointment.DoctorId) await queueService.emitRecalculated(appointment.DoctorId, dateKey(appointment.StartAt));
     try { await enqueueBookingConfirmed(await repository.getById(appointment.Id)); } catch (_) { /* notification failure must not roll back a valid booking */ }
     await recordAudit({ req, action: 'create', entity: 'appointment', entityId: appointment.Id, newValue: appointment });

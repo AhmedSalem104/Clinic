@@ -70,7 +70,8 @@ const renderLogin = () => {
 let router;
 const bootAuthenticated = async () => {
   const user = auth.user();
-  if (user.role === 'patient' && !window.location.pathname.startsWith('/patient-portal')) window.history.replaceState({}, '', '/patient-portal');
+  const patientCanBook = window.location.pathname.startsWith('/appointments/new');
+  if (user.role === 'patient' && !window.location.pathname.startsWith('/patient-portal') && !patientCanBook) window.history.replaceState({}, '', '/patient-portal');
   loginView.classList.add('hidden'); appView.classList.remove('hidden');
   renderSidebar(user); renderTopbar(user);
   if (user.role === 'patient') document.querySelector('[data-route="/notifications"]')?.remove();

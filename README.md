@@ -39,7 +39,7 @@
 | Clinic Owner | كل المرضى والأطباء والخدمات والأسعار والجداول والحجوزات والطابور والسجل الطبي والتقارير والمستخدمون والإعدادات وAudit Logs | لا توجد قيود تشغيلية داخل نطاقه |
 | Doctor | المرضى والحالات المعيّنة له، Visits، Pregnancy، Medications، Allergies، Labs، Ultrasound، Documents، Progress والتقارير | مرضى غير Assigned له وإدارة المستخدمين |
 | Reception | البحث، Add Patient، Booking، Phone Booking، Walk-in، Check-in، Queue، No Show، Cancel، Reschedule، Pause/Resume | Diagnosis وClinical Notes وتفاصيل الحمل والأدوية والتقارير الطبية |
-| Patient | إنشاء حساب بدون OTP، Login، Patient ID، المواعيد، حالة الموعد، متابعة الدور | السجل الطبي وDashboard العيادة ومرضى آخرون وإدارة الطابور |
+| Patient | إنشاء حساب بدون OTP، Login، Patient ID، حجز موعد لنفسها من شاشة الحجز المشتركة، رؤية مواعيدها، حالة الموعد، متابعة الدور | السجل الطبي وDashboard العيادة ومرضى آخرون وإدارة الطابور والحجز باسم مريضة أخرى |
 
 ~~~mermaid
 flowchart LR
@@ -131,7 +131,7 @@ sequenceDiagram
 4. تظهر المواعيد والبيانات التشغيلية فقط.
 5. يظهر رابط متابعة الدور عند توفره.
 
-الحجز الذاتي الكامل للمريضة غير مفعل حاليًا؛ الـReception ينشئ الحجز والمريضة تتابع حالته.
+الحجز الذاتي للمريضة متاح من نفس شاشة **New Booking** المستخدمة بواسطة الـReception، لكن بواجهة مبسطة تثبت المريضة الحالية تلقائيًا. الحجز يمر بنفس قواعد الطبيب والخدمة والـslot والسعر ومنع الـDouble Booking، ويسجل <code>BookingSource=online</code>.
 
 ## استخدام النظام حسب الدور
 
@@ -201,9 +201,27 @@ Phone Booking يستخدم نفس New Booking Flow ولا يوجد نظام من
 
 1. Login بالبريد وكلمة المرور.
 2. الانتقال التلقائي إلى Patient Portal.
-3. مراجعة Patient ID.
-4. مراجعة الموعد والطبيب والخدمة والحالة.
-5. فتح رابط متابعة الدور.
+3. الضغط على **Book a new appointment**.
+4. اختيار الطبيب والخدمة والتاريخ والـslot المتاح.
+5. مراجعة السعر ثم تأكيد الحجز.
+6. مراجعة رقم الموعد ورابط متابعة الدور من الـPortal.
+7. يمكن إلغاء الموعد حسب سياسة العيادة عندما تُفعّل صلاحية الإلغاء للمريضة.
+
+### حجز المريضة لنفسها
+
+```mermaid
+flowchart TD
+  A[Patient Login] --> B[Patient Portal]
+  B --> C[New Appointment]
+  C --> D[Choose Doctor]
+  D --> E[Choose Service]
+  E --> F[Choose Date and Available Slot]
+  F --> G[Show Current Price]
+  G --> H[Confirm Booking]
+  H --> I[Appointment Number and Queue Tracking Link]
+```
+
+يستخدم هذا الـFlow نفس <code>POST /api/appointments</code>، لكن الـBackend يستبدل أي <code>patientId</code> أو <code>bookingSource</code> مرسلين من المتصفح بالقيم الآمنة من جلسة المريضة. المريضة ترى مواعيدها فقط، ولا تستطيع فتح موعد مريضة أخرى أو استخدام صلاحيات إدارة الحجوزات.
 
 ## Queue Management
 
@@ -284,7 +302,7 @@ sequenceDiagram
 | /patients/:id | Patient Profile | Owner / Doctor / Reception ببيانات منقحة |
 | /assignments | Patient/Case Assignments | Owner / Reception |
 | /appointments | Calendar والحجوزات | Owner / Doctor / Reception |
-| /appointments/new | New Booking | Owner / Reception |
+| /appointments/new | New Booking / Patient Self-booking | Owner / Reception / Patient لحسابها فقط |
 | /queue | Queue Management | Owner / Reception |
 | /doctors | Doctors | Owner |
 | /schedules | Schedules | Owner / Doctor |
@@ -447,6 +465,7 @@ src/
 | POST | /api/auth/logout | Optional | إنهاء الجلسة |
 | POST | /api/patient-portal/register | Public + Rate Limit | إنشاء حساب المريضة |
 | GET | /api/patient-portal/summary | Patient | المواعيد والبيانات التشغيلية |
+| POST | /api/appointments | Owner / Reception / Patient لحسابها فقط | إنشاء حجز من شاشة New Booking المشتركة |
 | GET | /api/public/queue/:token | Public Token | متابعة الدور |
 
 ### مجموعات API

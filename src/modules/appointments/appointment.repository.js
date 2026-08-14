@@ -32,6 +32,7 @@ const overlaps = (start, end, otherStart, otherEnd) => start < otherEnd && end >
 
 const list = async ({ user, pageSize, offset, date, status, doctorId, serviceId, search }) => {
   const doctorScope = user?.role === 'doctor' ? 'AND a.DoctorId=@scopeDoctorId' : '';
+  const patientScope = user?.role === 'patient' ? 'AND a.PatientId=@scopePatientId' : '';
   const result = await query(`
     SELECT a.Id,a.PatientId,p.PatientCode,p.FullName PatientName,p.Phone,a.DoctorId,d.FullName DoctorName,a.ServiceId,s.Name ServiceName,
       a.BookingSource,a.StartAt,a.EndAt,a.ExpectedDurationMinutes,a.Price,a.Status,a.CreatedAt
@@ -39,11 +40,11 @@ const list = async ({ user, pageSize, offset, date, status, doctorId, serviceId,
     WHERE (@date IS NULL OR CONVERT(date,a.StartAt)=@date)
       AND (@status=N'' OR a.Status=@status) AND (@doctorId IS NULL OR a.DoctorId=@doctorId) AND (@serviceId IS NULL OR a.ServiceId=@serviceId)
       AND (@search=N'' OR p.NormalizedName LIKE N'%'+@search+N'%' OR p.NormalizedPhone LIKE N'%'+@search+N'%' OR p.PatientCode LIKE N'%'+@search+N'%')
-      ${doctorScope}
+      ${doctorScope} ${patientScope}
     ORDER BY a.StartAt DESC OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
     SELECT COUNT_BIG(1) Total FROM Appointments a JOIN Patients p ON p.Id=a.PatientId
     WHERE (@date IS NULL OR CONVERT(date,a.StartAt)=@date) AND (@status=N'' OR a.Status=@status) AND (@doctorId IS NULL OR a.DoctorId=@doctorId) AND (@serviceId IS NULL OR a.ServiceId=@serviceId)
-      AND (@search=N'' OR p.NormalizedName LIKE N'%'+@search+N'%' OR p.NormalizedPhone LIKE N'%'+@search+N'%' OR p.PatientCode LIKE N'%'+@search+N'%') ${doctorScope};
+      AND (@search=N'' OR p.NormalizedName LIKE N'%'+@search+N'%' OR p.NormalizedPhone LIKE N'%'+@search+N'%' OR p.PatientCode LIKE N'%'+@search+N'%') ${doctorScope} ${patientScope};
   `, (request) => request
     .input('date', sql.Date, date || null)
     .input('status', sql.NVarChar(30), status || '')
@@ -52,7 +53,8 @@ const list = async ({ user, pageSize, offset, date, status, doctorId, serviceId,
     .input('search', sql.NVarChar(180), search || '')
     .input('offset', sql.Int, offset)
     .input('pageSize', sql.Int, pageSize)
-    .input('scopeDoctorId', sql.Int, user?.doctorId || null));
+    .input('scopeDoctorId', sql.Int, user?.doctorId || null)
+    .input('scopePatientId', sql.Int, user?.patientId || null));
   return { rows: result.recordsets[0], total: Number(result.recordsets[1][0].Total) };
 };
 

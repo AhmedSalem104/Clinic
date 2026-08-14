@@ -23,6 +23,16 @@ export async function render(outlet) {
       <section class="card mt-6"><div class="border-b border-slate-100 px-5 py-4"><h2 class="font-semibold text-slate-900">الحجوزات</h2><p class="mt-1 text-xs text-slate-500">يمكنك فتح رابط الدور عند توفر رقم الطابور.</p></div>
         <div class="table-wrap">${rows ? `<table class="data-table"><thead><tr><th>الموعد</th><th>الطبيب</th><th>الخدمة</th><th>الحالة</th><th>الدور</th></tr></thead><tbody>${rows}</tbody></table>` : emptyState('لا توجد حجوزات مسجلة حاليًا.')}</div>
       </section>`;
+    const heading = outlet.querySelector('.section-heading');
+    if (heading) {
+      const bookingLink = document.createElement('a');
+      bookingLink.className = 'btn btn-primary';
+      bookingLink.href = '/appointments/new?source=patient';
+      bookingLink.dataset.route = '/appointments/new?source=patient';
+      bookingLink.textContent = 'Book a new appointment';
+      bookingLink.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate('/appointments/new?source=patient'); });
+      heading.append(bookingLink);
+    }
   } catch (error) {
     outlet.innerHTML = `<div class="card p-8 text-center"><h2 class="text-lg font-bold">تعذر تحميل بيانات الحساب</h2><p class="mt-2 text-sm text-slate-500">${escapeHtml(error.message)}</p></div>`;
   }

@@ -10,6 +10,7 @@ const PERMISSIONS = Object.freeze({
   VIEW_ASSIGNED_PATIENTS: 'patients:view_assigned',
   MANAGE_PATIENTS: 'patients:manage',
   MANAGE_BOOKINGS: 'appointments:manage',
+  BOOK_SELF_APPOINTMENT: 'appointments:book_self',
   MANAGE_QUEUE: 'queue:manage',
   VIEW_MEDICAL: 'medical:view',
   WRITE_MEDICAL: 'medical:write',
@@ -34,7 +35,7 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.MANAGE_BOOKINGS,
     PERMISSIONS.MANAGE_QUEUE
   ],
-  [ROLES.PATIENT]: []
+  [ROLES.PATIENT]: [PERMISSIONS.BOOK_SELF_APPOINTMENT]
 });
 
 const hasPermission = (role, permission) => (ROLE_PERMISSIONS[role] || []).includes(permission);

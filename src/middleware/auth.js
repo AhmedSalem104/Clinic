@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
 const { AppError } = require('../utils/errors');
-const { hasPermission, ROLES } = require('../config/permissions');
+const { hasPermission, ROLES, PERMISSIONS } = require('../config/permissions');
 
 const tokenFromRequest = (req) => {
   const cookieToken = req.cookies?.clinic_access;
@@ -36,6 +36,15 @@ const requireAnyPermission = (...permissions) => (req, _res, next) => {
   return next();
 };
 
+const requireAppointmentCreate = (req, _res, next) => {
+  if (hasPermission(req.user?.role, PERMISSIONS.MANAGE_BOOKINGS)) return next();
+  if (hasPermission(req.user?.role, PERMISSIONS.BOOK_SELF_APPOINTMENT) && req.user?.patientId) {
+    req.body = { ...req.body, patientId: req.user.patientId, bookingSource: 'online', notes: null };
+    return next();
+  }
+  return next(new AppError('Appointment booking is not allowed for this account.', 403, 'FORBIDDEN'));
+};
+
 const isOwner = (req) => req.user?.role === ROLES.OWNER;
 
-module.exports = { tokenFromRequest, requireAuth, requireRoles, requirePermission, requireAnyPermission, isOwner };
+module.exports = { tokenFromRequest, requireAuth, requireRoles, requirePermission, requireAnyPermission, requireAppointmentCreate, isOwner };

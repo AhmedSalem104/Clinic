@@ -1,6 +1,7 @@
 import { patientService } from '../services/patient-service.js';
 import { clinicService } from '../services/clinic-service.js';
 import { appointmentService } from '../services/appointment-service.js';
+import { auth } from '../core/auth.js';
 import { escapeHtml, debounce, loadingButton, toast, emptyState, localDateKey } from '../core/ui.js';
 
 const localToIso = (value) => new Date(value).toISOString();
@@ -47,9 +48,11 @@ const makeSlots = (schedule, booked, duration, date, pauses = [], exceptions = [
 
 export async function render(outlet) {
   const query = new URLSearchParams(window.location.search);
-  const queryPatient = query.get('patientId') || '';
-  const rescheduleId = query.get('rescheduleId') || '';
-  const requestedSource = query.get('source') === 'walk_in' ? 'walk_in' : 'reception';
+  const currentUser = auth.user();
+  const isPatientBooking = currentUser?.role === 'patient';
+  const queryPatient = isPatientBooking ? String(currentUser.patientId || '') : (query.get('patientId') || '');
+  const rescheduleId = isPatientBooking ? '' : (query.get('rescheduleId') || '');
+  const requestedSource = isPatientBooking ? 'online' : (query.get('source') === 'walk_in' ? 'walk_in' : 'reception');
   const [doctors, services] = await Promise.all([
     clinicService.doctors({ page: 1, pageSize: 100 }),
     clinicService.services({ page: 1, pageSize: 100 })
@@ -61,6 +64,29 @@ export async function render(outlet) {
   const form = document.querySelector('#appointment-form');
   const patientInput = document.querySelector('#patient-search-booking');
   const results = document.querySelector('#patient-results');
+  if (isPatientBooking) {
+    if (!currentUser.patientId) throw new Error('This patient account is not linked to an active patient record.');
+    const patientField = patientInput?.closest('.span-2');
+    if (patientField) {
+      patientField.innerHTML = `<label class="form-label">Patient</label><div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(currentUser.fullName)}</strong><span class="mx-2 text-blue-300">·</span>Your account</div><input type="hidden" name="patientId" value="${escapeHtml(currentUser.patientId)}" />`;
+    }
+    form.bookingSource.value = 'online';
+    form.bookingSource.parentElement.classList.add('hidden');
+    form.notes.closest('.span-2')?.classList.add('hidden');
+    const heading = document.querySelector('.section-heading h1');
+    const description = heading?.nextElementSibling;
+    const backLink = document.querySelector('.section-heading a');
+    if (heading) heading.textContent = 'Book a new appointment';
+    if (description) description.textContent = 'Choose your doctor, service, date and an available slot.';
+    if (backLink) { backLink.href = '/patient-portal'; backLink.dataset.route = '/patient-portal'; backLink.textContent = 'Back to my appointments'; }
+  }
+  const slotsBox = document.querySelector('#available-slots');
+  if (slotsBox) {
+    const priceBox = document.createElement('div');
+    priceBox.id = 'booking-price';
+    priceBox.className = 'mb-3';
+    slotsBox.parentElement.insertBefore(priceBox, slotsBox);
+  }
   const showSelected = async (id) => {
     if (!id) return;
     try {
@@ -68,7 +94,7 @@ export async function render(outlet) {
       document.querySelector('#selected-patient').innerHTML = `<div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.PatientCode)}<span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.Phone)}</div>`;
     } catch (_) { /* keep the picker usable */ }
   };
-  if (queryPatient) await showSelected(queryPatient);
+  if (queryPatient && !isPatientBooking) await showSelected(queryPatient);
   if (rescheduleId) {
     const existing = await appointmentService.get(rescheduleId);
     form.patientId.value = existing.PatientId;
@@ -82,7 +108,7 @@ export async function render(outlet) {
     form.querySelector('button[type=submit]').textContent = 'Save reschedule';
   }
 
-  patientInput.addEventListener('input', debounce(async () => {
+  if (!isPatientBooking) patientInput.addEventListener('input', debounce(async () => {
     const search = patientInput.value.trim();
     if (search.length < 2) { results.innerHTML = ''; return; }
     try {
@@ -104,11 +130,13 @@ export async function render(outlet) {
     const serviceId = form.serviceId.value;
     const date = form.date.value;
     const box = document.querySelector('#available-slots');
+    const priceBox = document.querySelector('#booking-price');
     form.startAt.value = '';
-    if (!doctorId || !serviceId || !date) { box.innerHTML = emptyState('Select a doctor, service and date.'); return; }
+    if (!doctorId || !serviceId || !date) { box.innerHTML = emptyState('Select a doctor, service and date.'); if (priceBox) priceBox.innerHTML = ''; return; }
     box.innerHTML = '<div class="text-xs text-slate-500">Loading available slots…</div>';
     try {
       const response = await appointmentService.slots({ doctorId, serviceId, date });
+      if (priceBox) priceBox.innerHTML = response.service?.Price !== undefined ? `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">Price: <strong class="text-slate-900">${Number(response.service.Price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>` : '';
       const slots = makeSlots(response.schedules?.[0], response.booked || [], Number(response.service?.BaseDurationMinutes || 15), date, response.pauses || [], response.exceptions || []);
       box.innerHTML = slots.length ? slots.map((slot) => `<button type="button" class="btn btn-secondary" data-slot="${slot.toISOString()}">${slot.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</button>`).join('') : emptyState('No slots are available for this date.');
       box.querySelectorAll('[data-slot]').forEach((button) => button.addEventListener('click', () => {
@@ -133,10 +161,15 @@ export async function render(outlet) {
     const button = form.querySelector('button[type=submit]');
     loadingButton(button, true);
     try {
-      if (form.dataset.rescheduleId) await appointmentService.reschedule(form.dataset.rescheduleId, { startAt: localToIso(form.startAt.value) });
-      else await appointmentService.create({ patientId: Number(form.patientId.value), doctorId: Number(form.doctorId.value), serviceId: Number(form.serviceId.value), bookingSource: form.bookingSource.value, startAt: localToIso(form.startAt.value), notes: form.notes.value || null });
+      let appointment;
+      if (form.dataset.rescheduleId) appointment = await appointmentService.reschedule(form.dataset.rescheduleId, { startAt: localToIso(form.startAt.value) });
+      else appointment = await appointmentService.create({ patientId: Number(form.patientId.value), doctorId: Number(form.doctorId.value), serviceId: Number(form.serviceId.value), bookingSource: form.bookingSource.value, startAt: localToIso(form.startAt.value), notes: form.notes.value || null });
+      if (isPatientBooking && appointment) {
+        const trackingUrl = appointment.PublicTrackingToken ? `${window.location.origin}/queue-tracking.html?token=${encodeURIComponent(appointment.PublicTrackingToken)}` : null;
+        await window.Swal.fire({ icon: 'success', title: 'Booking confirmed', text: `Appointment #${appointment.Id} has been created.${trackingUrl ? ' You can follow your queue from the link in your appointments.' : ''}`, confirmButtonText: 'View my appointments' });
+      }
       toast(form.dataset.rescheduleId ? 'Appointment rescheduled' : 'Booking confirmed');
-      window.clinicApp.navigate('/appointments');
+      window.clinicApp.navigate(isPatientBooking ? '/patient-portal' : '/appointments');
     } catch (error) {
       window.Swal.fire({ icon: 'error', title: 'Booking could not be created', text: error.message });
     } finally { loadingButton(button, false); }
