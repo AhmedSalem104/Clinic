@@ -1,16 +1,131 @@
 # Clinic Management System
 
-نظام إدارة متكامل لعيادة نساء وتوليد متعددة الأطباء. يغطي تشغيل العيادة، المرضى، الحجوزات، الطابور، الزيارات الطبية، الحالات، الحمل، الأدوية، التحاليل، السونار، المستندات، التقارير، الصلاحيات والتنبيهات.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/clinic-banner-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/clinic-banner-light.svg">
+    <img src="docs/assets/clinic-banner-light.svg" alt="Clinic Management System — women's health clinic operations" width="100%">
+  </picture>
+</p>
 
-> التسجيل الذاتي للمريضة يعمل بالبريد الإلكتروني وكلمة المرور **بدون OTP**.
+<p align="center">
+  <strong>نظام تشغيل متكامل لعيادة نساء وتوليد متعددة الأطباء</strong><br>
+  <sub>حجز · استقبال · طابور لحظي · سجل طبي منظم · متابعة الحمل · تقارير · صلاحيات آمنة</sub>
+</p>
 
-## الروابط
+<p align="center">
+  <a href="https://clinic-seven-sand.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo"></a>
+  <a href="https://github.com/AhmedSalem104/Clinic"><img src="https://img.shields.io/badge/GitHub-AhmedSalem104%2FClinic-181717?style=for-the-badge&logo=github" alt="GitHub repository"></a>
+</p>
 
-- الإنتاج: [clinic-paaf.vercel.app](https://clinic-paaf.vercel.app)
-- الإنتاج البديل: [clinic-seven-sand.vercel.app](https://clinic-seven-sand.vercel.app)
-- الدليل التفصيلي: [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md)
-- النماذج الطبية: [docs/medical-forms](docs/medical-forms/)
-- GitHub: [AhmedSalem104/Clinic](https://github.com/AhmedSalem104/Clinic)
+<p align="center">
+  <img src="https://img.shields.io/github/last-commit/AhmedSalem104/Clinic?branch=main&style=flat-square&label=last%20commit" alt="Last commit">
+  <img src="https://img.shields.io/github/repo-size/AhmedSalem104/Clinic?style=flat-square&label=repo%20size" alt="Repository size">
+  <img src="https://img.shields.io/badge/Node.js-%E2%89%A520-43853D?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 20 or newer">
+  <img src="https://img.shields.io/badge/Frontend-Vanilla%20JS%20%2B%20Tailwind-2563EB?style=flat-square" alt="Vanilla JavaScript and Tailwind CSS">
+  <img src="https://img.shields.io/badge/Database-SQL%20Server%20%2B%20mssql-CC2927?style=flat-square&logo=microsoftsqlserver&logoColor=white" alt="Microsoft SQL Server">
+</p>
+
+> **الحالة الحالية:** التسجيل الذاتي للمريضة يعمل بالبريد الإلكتروني وكلمة المرور **بدون OTP**، والمريضة تستطيع الآن إنشاء حجز لنفسها من نفس شاشة الحجز المستخدمة بواسطة الـReception، مع تطبيق قواعد الـAvailability وDouble Booking من الـBackend.
+
+## روابط سريعة
+
+| الرابط | الاستخدام |
+|---|---|
+| [التجربة المباشرة](https://clinic-seven-sand.vercel.app) | النسخة المنشورة على Vercel |
+| [الإنتاج البديل](https://clinic-paaf.vercel.app) | رابط Vercel بديل |
+| [دليل التشغيل الكامل](docs/PROJECT_GUIDE.md) | الـflows، الصلاحيات، الـAPI، قاعدة البيانات، النشر وحل المشاكل |
+| [النماذج الطبية الواقعية](docs/medical-forms/) | مراجع وحقول Patient History وGynecology وAntenatal وUltrasound وغيرها |
+| [GitHub Repository](https://github.com/AhmedSalem104/Clinic) | الكود، الإصدارات ونسخة README الحالية |
+
+## فهرس الدليل
+
+- [نظرة سريعة](#نظرة-سريعة)
+- [الهدف والكيانات الأساسية](#الهدف)
+- [المستخدمون والصلاحيات](#المستخدمون-والصلاحيات)
+- [تسجيل المريضة والحجز الذاتي](#patient-registration-بدون-otp)
+- [الحجز والطابور والـRealtime](#queue-management)
+- [السجل الطبي والنماذج](#السجل-الطبي)
+- [المعمارية والـAPI](#المعمارية)
+- [قاعدة البيانات والأمان](#قاعدة-البيانات)
+- [التشغيل المحلي والنشر](#التشغيل-المحلي)
+- [الحدود الحالية وDefinition of Done](#الحدود-الحالية)
+
+## نظرة سريعة
+
+هذا المشروع ليس صفحة حجز منفردة؛ هو **Clinic Operating System** يفصل التشغيل اليومي عن السجل الطبي، ويعطي كل مستخدم واجهة وصلاحيات تناسب دوره.
+
+| ما تم تسليمه | النتيجة العملية |
+|---|---|
+| Patient Registration بدون OTP | إنشاء حساب مريضة وربطه بسجل Patient داخل Transaction واحدة |
+| Patient Self-booking | اختيار الطبيب والخدمة والتاريخ والـslot والسعر من نفس New Booking Flow |
+| Booking Security | إجبار `patientId` و`BookingSource=online` من جلسة المريضة، وعدم قبول حجز مريضة أخرى |
+| Queue & Tracking | Queue Entry وPublic Tracking Token وEstimated Waiting Time |
+| Clinical Separation | Appointment منفصل عن Visit، وCase منفصل عن Pregnancy، وبيانات Structured قابلة للتقارير |
+| Role-based Access | Owner وDoctor وReception وPatient مع Server-side checks وAudit Logs |
+| Modular Stack | HTML/CSS/Vanilla JS/Tailwind + Node/Express + SQL Server/mssql |
+
+### خريطة النظام في لقطة واحدة
+
+```mermaid
+flowchart LR
+  Patient[المريضة] -->|Register / Login| Portal[Patient Portal]
+  Portal -->|نفس شاشة الحجز| Booking[New Booking]
+  Reception[Reception] --> Booking
+  Owner[Clinic Owner] --> Booking
+  Booking --> Availability[Availability + Pricing]
+  Availability --> Appointment[Appointment]
+  Appointment --> Queue[Queue Entry]
+  Queue --> Realtime[Realtime Updates]
+  Appointment --> Visit[Medical Visit]
+  Visit --> Record[Medical Record]
+  Record --> Reports[Reports + Progress]
+```
+
+### ما الذي يراه كل دور؟
+
+```mermaid
+flowchart TB
+  Owner[Owner] --> Everything[كل الوحدات وكل السجلات]
+  Doctor[Doctor] --> Assigned[Assigned Patients and Cases]
+  Reception[Reception] --> Operations[Booking + Check-in + Queue]
+  Patient[Patient] --> Own[Own Appointments + Queue Tracking]
+  Reception -. ممنوع .-> Clinical[Clinical Notes and Medical Data]
+  Patient -. ممنوع .-> Clinical
+```
+
+<details>
+<summary><strong>افتح رحلة الحجز الذاتي خطوة بخطوة</strong></summary>
+
+1. المريضة تسجل الدخول بالبريد وكلمة المرور.
+2. تضغط **Book a new appointment** من Patient Portal.
+3. تختار الطبيب، الخدمة، التاريخ والـslot الظاهر كمتاح.
+4. يظهر السعر الحالي حسب Doctor + Service.
+5. يؤكد الـBackend أن الـslot ما زال متاحًا داخل Transaction.
+6. يتم إنشاء Appointment وQueue Entry عند احتياج الخدمة للطابور.
+7. تعود المريضة إلى Portal لترى الموعد ورقم الدور ورابط المتابعة.
+
+```mermaid
+sequenceDiagram
+  actor P as Patient
+  participant UI as Shared Booking Form
+  participant API as Express API
+  participant DB as SQL Server
+  P->>UI: Choose doctor, service, date and slot
+  UI->>API: POST /api/appointments
+  API->>API: Bind patientId from authenticated session
+  API->>DB: Transaction: validate schedule, price and overlap
+  alt slot available
+    DB-->>API: Appointment + Queue Entry + tracking token
+    API-->>UI: 201 Created
+    UI-->>P: Confirmation and appointments list
+  else slot already taken
+    DB-->>API: Rollback / conflict
+    API-->>UI: 409 OVERLAPPING_BOOKING
+  end
+```
+
+</details>
 
 ## الهدف
 
@@ -806,14 +921,15 @@ Content-Type: application/json
 - Documents وProgress وReports.
 - Notifications وAudit Logs.
 - Patient Registration بدون OTP.
-- Patient Portal للمواعيد ومتابعة الدور.
+- Patient Portal للمواعيد ومتابعة الدور والحجز الذاتي من نفس شاشة New Booking.
+- Patient self-booking permission منفصلة عن `appointments:manage`، مع تثبيت هوية المريضة من الـJWT.
 - Vercel static/serverless deployment.
 - Local production Tailwind build.
 - Tests للصلاحيات والـWaiting Time والـMedical Validation والتسجيل.
 
 ## الحدود الحالية
 
-- Self-booking للمريضة غير مفعل.
+- Patient self-booking مفعل؛ أما إلغاء المريضة لموعدها ذاتيًا فيحتاج تفعيل Policy وصلاحية مستقلة قبل فتحه.
 - Email/Phone verification غير موجود لأن التسجيل بدون OTP.
 - SMS وWhatsApp Business API يحتاجان Provider فعلي.
 - Object Storage دائم مطلوب لملفات Vercel.

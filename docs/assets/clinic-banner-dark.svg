@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">Clinic Management System</title>
+  <desc id="desc">A clean operations dashboard for a multi-doctor women's health clinic.</desc>
+  <rect width="1280" height="360" rx="28" fill="#020617"/>
+  <rect x="34" y="34" width="1212" height="292" rx="22" fill="#0f172a" stroke="#1e3a8a" stroke-width="2"/>
+  <circle cx="108" cy="106" r="34" fill="#3b82f6"/>
+  <path d="M108 84v44M86 106h44" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+  <text x="168" y="98" fill="#f8fafc" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="700">Clinic Management System</text>
+  <text x="168" y="136" fill="#94a3b8" font-family="Inter,Arial,sans-serif" font-size="19">Women's health clinic operations, medical records and real-time queue</text>
+  <g transform="translate(168 190)">
+    <rect width="230" height="56" rx="12" fill="#172554"/>
+    <circle cx="30" cy="28" r="9" fill="#60a5fa"/>
+    <text x="52" y="35" fill="#bfdbfe" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600">Secure role-based access</text>
+    <rect x="248" width="194" height="56" rx="12" fill="#052e16"/>
+    <circle cx="278" cy="28" r="9" fill="#4ade80"/>
+    <text x="300" y="35" fill="#bbf7d0" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600">Live queue updates</text>
+    <rect x="454" width="188" height="56" rx="12" fill="#431407"/>
+    <circle cx="484" cy="28" r="9" fill="#fb923c"/>
+    <text x="506" y="35" fill="#fed7aa" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600">Patient self-booking</text>
+  </g>
+  <g transform="translate(868 64)">
+    <rect width="316" height="232" rx="16" fill="#020617" stroke="#334155"/>
+    <rect x="18" y="18" width="72" height="196" rx="10" fill="#1e293b"/>
+    <rect x="32" y="36" width="44" height="8" rx="4" fill="#60a5fa"/>
+    <rect x="32" y="70" width="40" height="7" rx="3" fill="#64748b"/>
+    <rect x="32" y="92" width="40" height="7" rx="3" fill="#64748b"/>
+    <rect x="32" y="114" width="40" height="7" rx="3" fill="#64748b"/>
+    <rect x="32" y="136" width="40" height="7" rx="3" fill="#64748b"/>
+    <rect x="32" y="158" width="40" height="7" rx="3" fill="#64748b"/>
+    <rect x="108" y="24" width="184" height="34" rx="8" fill="#1d4ed8"/>
+    <rect x="108" y="76" width="84" height="58" rx="10" fill="#1e293b" stroke="#334155"/>
+    <rect x="208" y="76" width="84" height="58" rx="10" fill="#1e293b" stroke="#334155"/>
+    <rect x="108" y="152" width="184" height="44" rx="10" fill="#1e293b" stroke="#334155"/>
+    <path d="M126 174h116" stroke="#60a5fa" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="263" cy="174" r="9" fill="#22c55e"/>
+  </g>
+</svg>
