@@ -1,0 +1,1 @@
+const {ok,created}=require('../../utils/response');const service=require('../medical-records/medical.service');const list=async(req,res)=>{const id=Number(req.query.patientId);await service.withAccess(id,req.user,async()=>{});return ok(res,await service.listLabs(id))};const create=async(req,res)=>created(res,await service.lab(req.body,req));module.exports={list,create};

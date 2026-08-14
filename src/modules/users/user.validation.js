@@ -1,0 +1,1 @@
+const {z}=require('zod');const userSchema=z.object({fullName:z.string().trim().min(2).max(160),email:z.string().email().max(255),password:z.string().min(8).max(200),role:z.enum(['owner','doctor','reception','patient']),doctorId:z.coerce.number().int().positive().optional().nullable()});const statusSchema=z.object({isActive:z.boolean()});module.exports={userSchema,statusSchema};

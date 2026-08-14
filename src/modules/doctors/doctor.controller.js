@@ -1,0 +1,9 @@
+const { ok, created } = require('../../utils/response');
+const { getPagination } = require('../../utils/pagination');
+const service = require('./doctor.service');
+const list = async (req, res) => { const p=getPagination(req.query); const result=await service.list({ ...p, search: String(req.query.search||'').trim() }); return ok(res,result.rows,{page:p.page,pageSize:p.pageSize,total:result.total,totalPages:Math.ceil(result.total/p.pageSize)}); };
+const get = async (req,res)=>ok(res,await service.get(Number(req.params.id)));
+const create = async (req,res)=>created(res,await service.create(req.body,req));
+const update = async (req,res)=>ok(res,await service.update(Number(req.params.id),req.body,req));
+const setServices = async (req,res)=>ok(res,await service.setServices(Number(req.params.id),req.body.serviceIds,req));
+module.exports={list,get,create,update,setServices};

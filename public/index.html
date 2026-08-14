@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Clinic management system" />
+    <title>عيادتي | Clinic Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { clinic: { 50: '#eff6ff', 600: '#2563eb', 700: '#1d4ed8', 900: '#0f172a' } },
+            fontFamily: { sans: ['Inter', 'Cairo', 'ui-sans-serif', 'system-ui'] }
+          }
+        }
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="login-view" class="min-h-screen hidden"></div>
+    <div id="app-view" class="min-h-screen hidden">
+      <div id="mobile-overlay" class="mobile-overlay hidden"></div>
+      <aside id="sidebar" class="sidebar"></aside>
+      <div class="app-shell">
+        <header id="topbar" class="topbar"></header>
+        <main id="page-content" class="page-container" tabindex="-1"></main>
+      </div>
+    </div>
+    <div id="global-modal-root"></div>
+    <script type="module" src="/js/core/app.js"></script>
+  </body>
+</html>

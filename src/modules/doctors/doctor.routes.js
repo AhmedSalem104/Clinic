@@ -1,0 +1,15 @@
+const express=require('express');
+const controller=require('./doctor.controller');
+const {doctorSchema,servicesSchema}=require('./doctor.validation');
+const {validate}=require('../../middleware/validate');
+const {requireAuth,requirePermission}=require('../../middleware/auth');
+const {PERMISSIONS}=require('../../config/permissions');
+const {asyncHandler}=require('../../utils/errors');
+const router=express.Router();
+router.use(requireAuth);
+router.get('/',asyncHandler(controller.list));
+router.get('/:id',asyncHandler(controller.get));
+router.post('/',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(doctorSchema),asyncHandler(controller.create));
+router.patch('/:id',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(doctorSchema),asyncHandler(controller.update));
+router.put('/:id/services',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(servicesSchema),asyncHandler(controller.setServices));
+module.exports={router};

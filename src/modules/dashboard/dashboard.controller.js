@@ -1,0 +1,1 @@
+const {ok}=require('../../utils/response');const repo=require('./dashboard.repository');const {clinicDateKey}=require('../../utils/date');const today=async(req,res)=>ok(res,await repo.today(req.user,req.query.date||clinicDateKey()));module.exports={today};

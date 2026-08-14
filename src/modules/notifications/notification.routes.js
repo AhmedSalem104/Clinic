@@ -1,0 +1,1 @@
+const express=require('express');const controller=require('./notification.controller');const {requireAuth}=require('../../middleware/auth');const {asyncHandler}=require('../../utils/errors');const router=express.Router();router.use(requireAuth);router.get('/',asyncHandler(controller.list));router.get('/whatsapp-link',asyncHandler(controller.whatsapp));module.exports={router};

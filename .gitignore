@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+uploads/
+storage/
+logs/
+coverage/
+.vercel/
+npm-debug.log*
+*.log
+Thumbs.db
+.DS_Store

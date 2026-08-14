@@ -1,0 +1,1 @@
+const {z}=require('zod');const serviceSchema=z.object({name:z.string().trim().min(2).max(160),category:z.string().max(100).optional().nullable(),baseDurationMinutes:z.coerce.number().int().min(1).max(480),requiresQueue:z.boolean().optional(),requiresBooking:z.boolean().optional(),isActive:z.boolean().optional()});module.exports={serviceSchema};
