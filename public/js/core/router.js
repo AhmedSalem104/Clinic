@@ -42,8 +42,19 @@ export const normalizePath = (path) => {
 
 export const createRouter = ({ outlet, onRoute }) => {
   let current = null;
-  const localizationObserver = new MutationObserver(() => localizePage(outlet));
-  localizationObserver.observe(outlet, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+  let localizationFrame = null;
+  let localizationObserver;
+  const scheduleLocalization = () => {
+    if (localizationFrame) cancelAnimationFrame(localizationFrame);
+    localizationFrame = requestAnimationFrame(() => {
+      localizationObserver.disconnect();
+      localizePage(outlet);
+      localizationObserver.observe(outlet, { childList: true, subtree: true });
+      localizationFrame = null;
+    });
+  };
+  localizationObserver = new MutationObserver(scheduleLocalization);
+  localizationObserver.observe(outlet, { childList: true, subtree: true });
   const resolve = (path) => routes.find((route) => route.match.test(pathnameOf(path)));
   const render = async (path = normalizePath(`${window.location.pathname}${window.location.search}`)) => {
     const normalized = normalizePath(path);

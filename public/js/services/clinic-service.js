@@ -3,11 +3,20 @@ export const clinicService = {
   doctors: (params = {}) => api.get(`/doctors?${new URLSearchParams(params)}`),
   doctor: (id) => api.get(`/doctors/${id}`),
   createDoctor: (data) => api.post('/doctors', data),
+  updateDoctor: (id, data) => api.patch(`/doctors/${id}`, data),
+  setDoctorServices: (id, serviceIds) => api.put(`/doctors/${id}/services`, { serviceIds }),
   services: (params = {}) => api.get(`/services?${new URLSearchParams(params)}`),
   createService: (data) => api.post('/services', data),
+  updateService: (id, data) => api.patch(`/services/${id}`, data),
   pricing: (params = {}) => api.get(`/pricing?${new URLSearchParams(params)}`),
   createPricing: (data) => api.post('/pricing', data),
+  updatePricing: (id, data) => api.patch(`/pricing/${id}`, data),
   schedules: (params = {}) => api.get(`/schedules?${new URLSearchParams(params)}`),
   createSchedule: (data) => api.post('/schedules', data),
-  addException: (data) => api.post('/schedules/exceptions', data)
+  updateSchedule: (id, data) => api.patch(`/schedules/${id}`, data),
+  updateScheduleStatus: (id, isActive) => api.patch(`/schedules/${id}/status`, { isActive }),
+  deleteSchedule: (id) => api.delete(`/schedules/${id}`),
+  addException: (data) => api.post('/schedules/exceptions', data),
+  updateException: (id, data) => api.patch(`/schedules/exceptions/${id}`, data),
+  deleteException: (id) => api.delete(`/schedules/exceptions/${id}`)
 };

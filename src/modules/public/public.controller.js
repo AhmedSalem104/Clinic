@@ -3,6 +3,8 @@ const { AppError } = require('../../utils/errors');
 const repository = require('./public.repository');
 
 const queue = async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
   const token = String(req.params.token || '').trim();
   if (!/^[a-f0-9]{48}$/i.test(token)) throw new AppError('Queue tracking link is invalid.', 404, 'TRACKING_NOT_FOUND');
   const row = await repository.queueByToken(token);

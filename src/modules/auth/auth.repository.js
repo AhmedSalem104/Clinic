@@ -17,6 +17,11 @@ const findById = async (id) => {
   return result.recordset[0] || null;
 };
 
+const getManageableById = async (id) => {
+  const result = await query(`SELECT TOP 1 Id, FullName, Email, Role, DoctorId, PatientId, IsActive, CreatedAt, UpdatedAt FROM Users WHERE Id = @id`, (request) => request.input('id', sql.Int, id));
+  return result.recordset[0] || null;
+};
+
 const touchLastLogin = (id) => query('UPDATE Users SET LastLoginAt = SYSUTCDATETIME() WHERE Id = @id', (request) => request.input('id', sql.Int, id));
 
 const list = async ({ pageSize, offset }) => {
@@ -48,4 +53,21 @@ const updateStatus = async (id, isActive) => {
   return result.rowsAffected[0] > 0;
 };
 
-module.exports = { findByEmail, findById, touchLastLogin, list, createUser, updateStatus };
+const updateUser = async (id, { fullName, email, role, doctorId, patientId, passwordHash }) => {
+  const result = await query(`
+    UPDATE Users
+    SET FullName=@fullName, Email=@email, Role=@role, DoctorId=@doctorId, PatientId=@patientId,
+      PasswordHash=COALESCE(@passwordHash, PasswordHash), UpdatedAt=SYSUTCDATETIME()
+    OUTPUT INSERTED.Id, INSERTED.FullName, INSERTED.Email, INSERTED.Role, INSERTED.DoctorId, INSERTED.PatientId, INSERTED.IsActive, INSERTED.UpdatedAt
+    WHERE Id=@id
+  `, (request) => request.input('id', sql.Int, id)
+    .input('fullName', sql.NVarChar(160), fullName)
+    .input('email', sql.NVarChar(255), email)
+    .input('role', sql.NVarChar(30), role)
+    .input('doctorId', sql.Int, doctorId || null)
+    .input('patientId', sql.Int, patientId || null)
+    .input('passwordHash', sql.NVarChar(255), passwordHash || null));
+  return result.recordset[0] || null;
+};
+
+module.exports = { findByEmail, findById, getManageableById, touchLastLogin, list, createUser, updateUser, updateStatus };

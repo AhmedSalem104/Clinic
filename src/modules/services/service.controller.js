@@ -1,5 +1,5 @@
-const {ok,created}=require('../../utils/response');const {getPagination}=require('../../utils/pagination');const repo=require('./service.repository');
+const {ok,created}=require('../../utils/response');const {getPagination}=require('../../utils/pagination');const repo=require('./service.repository');const {recordAudit}=require('../../services/audit.service');const {AppError}=require('../../utils/errors');
 const list=async(req,res)=>{const p=getPagination(req.query);const r=await repo.list({...p,search:String(req.query.search||'').trim()});return ok(res,r.rows,{page:p.page,pageSize:p.pageSize,total:r.total,totalPages:Math.ceil(r.total/p.pageSize)})};
-const create=async(req,res)=>created(res,await repo.create(req.body));
-const update=async(req,res)=>ok(res,await repo.update(Number(req.params.id),req.body));
+const create=async(req,res)=>{const row=await repo.create(req.body);await recordAudit({req,action:'create',entity:'service',entityId:row.Id,newValue:row});return created(res,row)};
+const update=async(req,res)=>{const before=await repo.getById(Number(req.params.id));if(!before)throw new AppError('الخدمة غير موجودة.',404,'SERVICE_NOT_FOUND');const row=await repo.update(Number(req.params.id),req.body);await recordAudit({req,action:'update',entity:'service',entityId:row.Id,oldValue:before,newValue:row});return ok(res,row)};
 module.exports={list,create,update};
