@@ -13,7 +13,7 @@ const bookingSchema = z.object({
   consent: z.literal(true)
 });
 
-const optionsQuerySchema = z.object({});
+const optionsQuerySchema = z.object({ doctorId: z.coerce.number().int().positive().optional() });
 
 const slotsQuerySchema = z.object({
   doctorId: z.coerce.number().int().positive(),

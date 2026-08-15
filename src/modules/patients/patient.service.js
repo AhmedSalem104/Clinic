@@ -49,11 +49,12 @@ const update = async (id, body, req) => {
   return result.patient;
 };
 
-const archive = async (id, req) => {
-  const before = await repository.getArchiveTarget(id);
+const remove = async (id, req) => {
+  const before = await repository.getDeleteTarget(id);
   if (!before) throw new AppError('المريضة غير موجودة.', 404, 'PATIENT_NOT_FOUND');
-  const patient = await repository.archive(id);
-  await recordAudit({ req, action: 'archive', entity: 'patient', entityId: id, oldValue: before, newValue: patient });
+  const patient = await repository.remove(id);
+  if (!patient) throw new AppError('المريضة غير موجودة.', 404, 'PATIENT_NOT_FOUND');
+  await recordAudit({ req, action: 'delete', entity: 'patient', entityId: id, oldValue: before });
   return patient;
 };
 
@@ -70,4 +71,4 @@ const getAssignments = async (patientId, user) => {
   return repository.getAssignments(patientId);
 };
 
-module.exports = { list, create, getById, update, archive, assign, getAssignments, normalizeText, normalizePhone };
+module.exports = { list, create, getById, update, remove, assign, getAssignments, normalizeText, normalizePhone };

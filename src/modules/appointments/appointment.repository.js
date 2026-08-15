@@ -69,7 +69,9 @@ const loadScheduleContext = async (request, doctorId, serviceId, startAt) => {
         COALESCE((SELECT TOP 1 p.Price FROM Pricing p WHERE p.DoctorId=@doctorId AND p.ServiceId=@serviceId AND p.IsActive=1
           AND p.EffectiveFrom<=CONVERT(date,@startAt) AND (p.EffectiveTo IS NULL OR p.EffectiveTo>=CONVERT(date,@startAt)) ORDER BY p.EffectiveFrom DESC),0) Price,
         s.RequiresQueue
-      FROM Services s JOIN DoctorServices ds ON ds.ServiceId=s.Id AND ds.DoctorId=@doctorId AND ds.IsActive=1
+      FROM Services s
+      JOIN DoctorServices ds ON ds.ServiceId=s.Id AND ds.DoctorId=@doctorId AND ds.IsActive=1
+      JOIN Doctors d ON d.Id=ds.DoctorId AND d.Status=N'active'
       WHERE s.Id=@serviceId AND s.IsActive=1;
 
       SELECT TOP 1 DayOfWeek,StartTime,EndTime,BreaksJson
@@ -136,8 +138,10 @@ const availableSlots = async ({ doctorId, serviceId, date }) => {
     SELECT TOP 1 s.BaseDurationMinutes,
       COALESCE((SELECT TOP 1 p.Price FROM Pricing p WHERE p.DoctorId=@doctorId AND p.ServiceId=@serviceId AND p.IsActive=1
         AND p.EffectiveFrom<=@date AND (p.EffectiveTo IS NULL OR p.EffectiveTo>=@date) ORDER BY p.EffectiveFrom DESC),0) Price
-    FROM Services s JOIN DoctorServices ds ON ds.ServiceId=s.Id AND ds.DoctorId=@doctorId
-    WHERE s.Id=@serviceId AND s.IsActive=1 AND ds.IsActive=1;
+    FROM Services s
+    JOIN DoctorServices ds ON ds.ServiceId=s.Id AND ds.DoctorId=@doctorId AND ds.IsActive=1
+    JOIN Doctors d ON d.Id=ds.DoctorId AND d.Status=N'active'
+    WHERE s.Id=@serviceId AND s.IsActive=1;
     SELECT TOP 1 DayOfWeek,StartTime,EndTime,BreaksJson FROM DoctorSchedules
     WHERE DoctorId=@doctorId AND IsActive=1 AND DayOfWeek=(DATEDIFF(DAY, CONVERT(date,'19000107'), @date) % 7) ORDER BY StartTime;
     SELECT ExceptionDate,StartTime,EndTime,ExceptionType,Reason FROM ScheduleExceptions WHERE DoctorId=@doctorId AND ExceptionDate=@date;

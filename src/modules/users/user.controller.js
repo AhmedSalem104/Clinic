@@ -56,9 +56,10 @@ const remove = async (req, res) => {
   if (id === req.user.id) throw new AppError('لا يمكن حذف حسابك الحالي.', 400, 'SELF_DELETION_NOT_ALLOWED');
   const before = await repo.getManageableById(id);
   if (!before) throw new AppError('المستخدم غير موجود.', 404, 'USER_NOT_FOUND');
-  await repo.updateStatus(id, false);
-  await recordAudit({ req, action: 'archive', entity: 'user', entityId: id, oldValue: before, newValue: { ...before, IsActive: false } });
-  return ok(res, { id, isActive: false });
+  const deleted = await repo.removeUser(id);
+  if (!deleted) throw new AppError('المستخدم غير موجود.', 404, 'USER_NOT_FOUND');
+  await recordAudit({ req, action: 'delete', entity: 'user', entityId: id, oldValue: before });
+  return ok(res, { id, deleted: true });
 };
 
 module.exports = { list, create, update, status, remove };

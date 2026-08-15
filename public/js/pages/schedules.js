@@ -1,5 +1,5 @@
 import { clinicService } from '../services/clinic-service.js';
-import { escapeHtml, emptyState, statusBadge, formatDate, icon, toast, loadingButton, confirm, archiveButton } from '../core/ui.js';
+import { escapeHtml, emptyState, statusBadge, formatDate, icon, toast, loadingButton, confirm, deleteButton } from '../core/ui.js';
 
 const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -41,8 +41,8 @@ export async function render(outlet) {
       scheduleTable.querySelectorAll('[data-toggle-schedule]').forEach((button) => button.addEventListener('click', async () => { const row = scheduleRows.find((item) => item.Id === Number(button.dataset.toggleSchedule)); if (!(await confirm(`${button.dataset.next === 'true' ? 'تفعيل' : 'تعطيل'} الفترة؟`, 'لن تُستخدم الفترة غير النشطة في المواعيد الجديدة.', button.dataset.next === 'true' ? 'تفعيل' : 'تعطيل'))) return; try { await clinicService.updateScheduleStatus(row.Id, button.dataset.next === 'true'); toast('تم تحديث حالة الفترة'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تحديث الفترة', text: error.message }); } }));
       exceptionTable.querySelectorAll('[data-edit-exception]').forEach((button) => button.addEventListener('click', () => openException(exceptionRows.find((row) => row.Id === Number(button.dataset.editException)))));
       exceptionTable.querySelectorAll('[data-delete-exception]').forEach((button) => button.addEventListener('click', async () => { if (!(await confirm('حذف الاستثناء؟', 'سيعود الجدول الأصلي لهذا التاريخ.', 'حذف'))) return; try { await clinicService.deleteException(button.dataset.deleteException); toast('تم حذف الاستثناء'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر حذف الاستثناء', text: error.message }); } }));
-      scheduleTable.querySelectorAll('[data-toggle-schedule][data-next="false"]').forEach((toggle) => toggle.parentElement.append(archiveButton('archiveSchedule', toggle.dataset.toggleSchedule, 'حذف')));
-      scheduleTable.querySelectorAll('[data-archive-schedule]').forEach((button) => button.addEventListener('click', async () => { if (!(await confirm('حذف فترة العمل؟', 'سيتم تعطيل الفترة مع الاحتفاظ بسجل الجدول.', 'حذف / أرشفة'))) return; try { await clinicService.deleteSchedule(button.dataset.archiveSchedule); toast('تمت أرشفة فترة العمل'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر حذف فترة العمل', text: error.message }); } }));
+      scheduleTable.querySelectorAll('[data-toggle-schedule]').forEach((toggle) => toggle.parentElement.append(deleteButton('deleteSchedule', toggle.dataset.toggleSchedule)));
+      scheduleTable.querySelectorAll('[data-delete-schedule]').forEach((button) => button.addEventListener('click', async () => { if (!(await confirm('حذف فترة العمل نهائيًا؟', 'سيتم حذف فترة العمل من قاعدة البيانات ولن يمكن استعادتها.', 'حذف نهائي'))) return; try { await clinicService.deleteSchedule(button.dataset.deleteSchedule); toast('تم حذف فترة العمل نهائيًا'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر حذف فترة العمل', text: error.message }); } }));
       scheduleTable.querySelector('[data-empty-schedule]')?.addEventListener('click', () => openSchedule());
       exceptionTable.querySelector('[data-empty-exception]')?.addEventListener('click', () => openException());
     } catch (error) { scheduleTable.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; exceptionTable.innerHTML = ''; }

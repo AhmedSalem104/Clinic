@@ -117,14 +117,53 @@ const update = async (id, data) => {
   return { patient: result.recordset[0], before: before.recordset[0] };
 };
 
-const archive = async (id) => {
-  const result = await query(`UPDATE Patients SET Status=N'archived', UpdatedAt=SYSUTCDATETIME()
-    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.Status, INSERTED.UpdatedAt
-    WHERE Id=@id`, (request) => request.input('id', sql.Int, id));
+const remove = async (id) => withTransaction(async (transaction) => {
+  const dependencyResult = await transaction.request().input('id', sql.Int, id).query(`
+    SELECT
+      (SELECT COUNT_BIG(1) FROM Users WHERE PatientId=@id) AS UsersCount,
+      (SELECT COUNT_BIG(1) FROM PatientAssignments WHERE PatientId=@id) AS AssignmentsCount,
+      (SELECT COUNT_BIG(1) FROM MedicalCases WHERE PatientId=@id) AS CasesCount,
+      (SELECT COUNT_BIG(1) FROM PatientGyneHistories WHERE PatientId=@id) AS GyneHistoryCount,
+      (SELECT COUNT_BIG(1) FROM ObstetricHistory WHERE PatientId=@id) AS ObstetricHistoryCount,
+      (SELECT COUNT_BIG(1) FROM Pregnancies WHERE PatientId=@id) AS PregnanciesCount,
+      (SELECT COUNT_BIG(1) FROM Appointments WHERE PatientId=@id) AS AppointmentsCount,
+      (SELECT COUNT_BIG(1) FROM QueueEntries WHERE PatientId=@id) AS QueueEntriesCount,
+      (SELECT COUNT_BIG(1) FROM Visits WHERE PatientId=@id) AS VisitsCount,
+      (SELECT COUNT_BIG(1) FROM Medications WHERE PatientId=@id) AS MedicationsCount,
+      (SELECT COUNT_BIG(1) FROM Allergies WHERE PatientId=@id) AS AllergiesCount,
+      (SELECT COUNT_BIG(1) FROM LabTests WHERE PatientId=@id) AS LabsCount,
+      (SELECT COUNT_BIG(1) FROM Ultrasounds WHERE PatientId=@id) AS UltrasoundsCount,
+      (SELECT COUNT_BIG(1) FROM Documents WHERE PatientId=@id) AS DocumentsCount,
+      (SELECT COUNT_BIG(1) FROM ProgressIndicators WHERE PatientId=@id) AS ProgressCount,
+      (SELECT COUNT_BIG(1) FROM Notifications WHERE PatientId=@id) AS NotificationsCount;
+  `);
+  const counts = dependencyResult.recordset[0] || {};
+  const blockers = [
+    ['حسابات الدخول', counts.UsersCount],
+    ['التعيينات', counts.AssignmentsCount],
+    ['الحالات الطبية', counts.CasesCount],
+    ['التاريخ النسائي', counts.GyneHistoryCount],
+    ['التاريخ التوليدي', counts.ObstetricHistoryCount],
+    ['سجلات الحمل', counts.PregnanciesCount],
+    ['الحجوزات', counts.AppointmentsCount],
+    ['عناصر الطابور', counts.QueueEntriesCount],
+    ['الزيارات الطبية', counts.VisitsCount],
+    ['الأدوية', counts.MedicationsCount],
+    ['الحساسيات', counts.AllergiesCount],
+    ['التحاليل', counts.LabsCount],
+    ['السونار', counts.UltrasoundsCount],
+    ['المستندات', counts.DocumentsCount],
+    ['مؤشرات المتابعة', counts.ProgressCount],
+    ['الإشعارات', counts.NotificationsCount]
+  ].filter(([, count]) => Number(count) > 0);
+  if (blockers.length) {
+    throw new AppError(`لا يمكن حذف سجل المريضة نهائيًا لأنه مرتبط بـ ${blockers.map(([label, count]) => `${label} (${count})`).join('، ')}. احذف السجلات التشغيلية المرتبطة حسب السياسة أو عطّل السجل.`, 409, 'PATIENT_HAS_REFERENCES', { blockers });
+  }
+  const result = await transaction.request().input('id', sql.Int, id).query('DELETE FROM Patients OUTPUT DELETED.Id, DELETED.PatientCode, DELETED.FullName WHERE Id=@id');
   return result.recordset[0] || null;
-};
+});
 
-const getArchiveTarget = async (id) => {
+const getDeleteTarget = async (id) => {
   const result = await query('SELECT TOP 1 Id, PatientCode, FullName, Status, ProfileStatus FROM Patients WHERE Id=@id', (request) => request.input('id', sql.Int, id));
   return result.recordset[0] || null;
 };
@@ -152,4 +191,4 @@ const getAssignments = async (patientId) => {
   return result.recordset;
 };
 
-module.exports = { list, findPotentialDuplicates, create, getById, update, archive, getArchiveTarget, assign, getAssignments };
+module.exports = { list, findPotentialDuplicates, create, getById, update, remove, getDeleteTarget, assign, getAssignments };

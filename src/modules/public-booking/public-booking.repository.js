@@ -2,17 +2,26 @@ const crypto = require('node:crypto');
 const { query } = require('../../db/repository');
 const { sql } = require('../../db/connection');
 
-const listOptions = async () => {
+const listOptions = async (doctorId = null) => {
   const result = await query(`
-    SELECT Id,FullName,Specialty
-    FROM Doctors
-    WHERE Status=N'active'
+    SELECT d.Id,d.FullName,d.Specialty
+    FROM Doctors d
+    WHERE d.Status=N'active'
+      AND EXISTS (SELECT 1 FROM DoctorSchedules ds WHERE ds.DoctorId=d.Id AND ds.IsActive=1)
     ORDER BY FullName;
     SELECT Id,Name,Category,BaseDurationMinutes,RequiresQueue
-    FROM Services
-    WHERE IsActive=1 AND RequiresBooking=1
+    FROM Services s
+    WHERE s.IsActive=1 AND s.RequiresBooking=1
+      AND EXISTS (
+        SELECT 1
+        FROM DoctorServices ds
+        JOIN Doctors d ON d.Id=ds.DoctorId AND d.Status=N'active'
+        WHERE ds.ServiceId=s.Id AND ds.IsActive=1
+          AND EXISTS (SELECT 1 FROM DoctorSchedules sch WHERE sch.DoctorId=ds.DoctorId AND sch.IsActive=1)
+          AND (@doctorId IS NULL OR ds.DoctorId=@doctorId)
+      )
     ORDER BY Name;
-  `);
+  `, (request) => request.input('doctorId', sql.Int, doctorId || null));
   return { doctors: result.recordsets[0], services: result.recordsets[1] };
 };
 

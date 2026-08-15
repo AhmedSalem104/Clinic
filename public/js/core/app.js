@@ -47,29 +47,48 @@ const renderTopbar = (user) => {
 };
 
 const renderLogin = () => {
-  loginView.innerHTML = `<div class="login-panel"><div class="login-visual"><div class="max-w-lg"><div class="flex items-center gap-3"><div class="brand-mark">+</div><span class="text-sm font-bold text-slate-900">عيادتي</span></div><h1 class="mt-12 text-4xl font-bold leading-tight text-slate-900">تشغيل هادئ وواضح<br><span class="text-blue-600">لكل رحلة مريضة.</span></h1><p class="mt-5 max-w-md text-sm leading-7 text-slate-500">إدارة الحجوزات والطابور والسجل الطبي بصلاحيات واضحة وبيانات قابلة للمتابعة.</p><div class="mt-12 grid grid-cols-3 gap-3 text-xs text-slate-500"><div class="rounded-xl border border-blue-100 bg-white/70 p-3">طابور لحظي</div><div class="rounded-xl border border-blue-100 bg-white/70 p-3">سجل موحد</div><div class="rounded-xl border border-blue-100 bg-white/70 p-3">صلاحيات آمنة</div></div></div></div><div class="flex items-center justify-center bg-white"><div class="login-card"><div class="mb-8"><div class="text-2xl font-bold text-slate-900">تسجيل الدخول</div><p class="mt-2 text-sm text-slate-500">أدخل بيانات حساب العيادة للمتابعة.</p></div><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="owner@clinic.local" required /></div><div><div class="flex items-center justify-between"><label class="form-label mb-0" for="login-password">كلمة المرور</label><span class="text-[11px] text-slate-400">جلسة آمنة</span></div><input class="input mt-2" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="btn btn-primary w-full" type="submit">دخول إلى النظام</button></form><div class="mt-7 rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">للتجربة المحلية بعد تشغيل seed: <span class="font-semibold">owner@clinic.local</span> / <span class="font-semibold">ChangeMe!123</span></div></div></div></div>`;
-  const patientRegistrationLink = document.createElement('a');
-  patientRegistrationLink.href = '/patient-register.html';
-  patientRegistrationLink.className = 'mt-4 block text-center text-xs font-semibold text-blue-600 hover:underline';
-  patientRegistrationLink.textContent = 'إنشاء حساب مريضة جديد';
-  loginView.querySelector('.login-card')?.append(patientRegistrationLink);
-  const publicBookingLink = document.createElement('a');
-  publicBookingLink.href = '/patient-booking.html';
-  publicBookingLink.className = 'mt-3 block text-center text-sm font-semibold text-slate-700 hover:text-blue-600';
-  publicBookingLink.textContent = 'حجز موعد بدون تسجيل دخول';
-  loginView.querySelector('.login-card')?.append(publicBookingLink);
+  const showStaff = new URLSearchParams(window.location.search).get('staff') === '1';
+  loginView.innerHTML = `<section class="gateway">
+    <div class="gateway-backdrop" aria-hidden="true"></div>
+    <div class="gateway-content">
+      <header class="gateway-header"><a class="gateway-brand" href="/"><span class="gateway-brand-mark">+</span><span>عيادتي</span></a><span class="gateway-header-note">رعاية نسائية منظمة وواضحة</span></header>
+      <div class="gateway-layout">
+        <div class="gateway-copy">
+          <div class="gateway-kicker">${icon('calendar')} <span>حجز المريضة يبدأ من هنا</span></div>
+          <h1>احجزي موعدك<br><span>بسهولة واطمئنان.</span></h1>
+          <p>اختاري الطبيب والخدمة والموعد المناسب لكِ، واحصلي على رقم الحجز والدور المتوقع بدون إنشاء حساب أو استخدام رمز تحقق.</p>
+          <div class="gateway-actions">
+            <a class="gateway-primary-action" href="/patient-booking.html">${icon('calendar')}<span><strong>احجزي موعدًا الآن</strong><small>بدون تسجيل دخول</small></span>${icon('arrow')}</a>
+            <a class="gateway-secondary-action" href="/patient-register.html">${icon('users')}<span><strong>إنشاء حساب للمريضة</strong><small>لمتابعة المواعيد والدور لاحقًا</small></span></a>
+          </div>
+          <div class="gateway-steps"><div><b>01</b><span>اختاري الموعد</span></div><div><b>02</b><span>احفظي رقم الحجز</span></div><div><b>03</b><span>تابعي دورك</span></div></div>
+        </div>
+        <section id="staff-entry-card" class="gateway-staff-entry ${showStaff ? 'hidden' : ''}"><div class="gateway-staff-icon">${icon('users')}</div><span class="gateway-card-label">للعاملين في العيادة</span><h2>دخول الريسبشن والمالك</h2><p>إدارة الحجوزات والطابور والمرضى والصلاحيات من بوابة فريق العيادة.</p><button id="open-staff-login" class="gateway-staff-button" type="button">دخول فريق العيادة ${icon('arrow')}</button></section>
+        <section id="staff-login-card" class="gateway-login-card ${showStaff ? '' : 'hidden'}"><button id="back-to-patient" class="gateway-back-link" type="button">${icon('arrow')} العودة إلى حجز المريضة</button><div class="gateway-login-heading"><span class="gateway-staff-icon">${icon('shield')}</span><div><span class="gateway-card-label">بوابة الفريق</span><h2>تسجيل دخول العيادة</h2></div></div><p class="gateway-login-help">للاستقبال والمالك والطبيب باستخدام بيانات الحساب الخاصة بالعيادة.</p><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="owner@clinic.local" required /></div><div><label class="form-label" for="login-password">كلمة المرور</label><input class="input" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="gateway-login-button" type="submit">دخول إلى النظام ${icon('arrow')}</button></form></section>
+      </div>
+      <footer class="gateway-footer"><span>الحجز الأول لا يحتاج تسجيل دخول.</span><span>عند الوصول، يستكمل الريسبشن بيانات الملف الطبي.</span></footer>
+    </div>
+  </section>`;
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
-  document.querySelector('#login-form').addEventListener('submit', async (event) => {
+
+  const staffEntry = document.querySelector('#staff-entry-card');
+  const staffCard = document.querySelector('#staff-login-card');
+  const openStaff = () => { staffEntry.classList.add('hidden'); staffCard.classList.remove('hidden'); window.history.replaceState({}, '', '/?staff=1'); document.querySelector('#login-email')?.focus(); };
+  const showPatient = () => { staffCard.classList.add('hidden'); staffEntry.classList.remove('hidden'); window.history.replaceState({}, '', '/'); };
+  document.querySelector('#open-staff-login')?.addEventListener('click', openStaff);
+  document.querySelector('#back-to-patient')?.addEventListener('click', showPatient);
+  document.querySelector('#login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     const errorBox = document.querySelector('#login-error');
-    const button = form.querySelector('button');
-    button.disabled = true; button.textContent = 'جارٍ التحقق...'; errorBox.classList.add('hidden');
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true; button.innerHTML = 'جارٍ التحقق...'; errorBox.classList.add('hidden');
     try { await auth.login(form.email.value, form.password.value); await bootAuthenticated(); }
     catch (error) { errorBox.textContent = error.message || 'تعذر تسجيل الدخول.'; errorBox.classList.remove('hidden'); }
-    finally { button.disabled = false; button.textContent = 'دخول إلى النظام'; }
+    finally { button.disabled = false; button.innerHTML = `دخول إلى النظام ${icon('arrow')}`; }
   });
+  if (showStaff) document.querySelector('#login-email')?.focus();
 };
 
 let router;

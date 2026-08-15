@@ -29,9 +29,10 @@ const remove = async (req, res) => {
   const id = Number(req.params.id);
   const before = await repo.getById(id);
   if (!before) throw new AppError('السعر غير موجود.', 404, 'PRICING_NOT_FOUND');
-  const row = await repo.archive(id);
-  await recordAudit({ req, action: 'archive', entity: 'pricing', entityId: id, oldValue: before, newValue: row });
-  return ok(res, { id, isActive: false });
+  const row = await repo.remove(id);
+  if (!row) throw new AppError('السعر غير موجود.', 404, 'PRICING_NOT_FOUND');
+  await recordAudit({ req, action: 'delete', entity: 'pricing', entityId: id, oldValue: before });
+  return ok(res, { id, deleted: true });
 };
 
 module.exports = { list, create, update, remove };

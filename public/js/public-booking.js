@@ -1,5 +1,6 @@
 import { publicBookingService } from './services/public-booking-service.js';
 import { makeSlots } from './utils/appointment-slots.mjs';
+import { clockMinutes } from './utils/time.mjs';
 import { escapeHtml, formatMoney, localDateKey, loadingButton } from './core/ui.js';
 
 const form = document.querySelector('#public-booking-form');
@@ -30,10 +31,14 @@ const renderConfirmation = (booking) => {
   confirmation.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+const renderServices = (services = []) => {
+  serviceField.innerHTML = `<option value="">اختاري الخدمة</option>${services.map((service) => `<option value="${service.Id}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}`;
+};
+
 const renderOptions = async () => {
   const options = await publicBookingService.options();
   doctorField.innerHTML = `<option value="">اختاري الطبيب</option>${(options.doctors || []).map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)}${doctor.Specialty ? ` · ${escapeHtml(doctor.Specialty)}` : ''}</option>`).join('')}`;
-  serviceField.innerHTML = `<option value="">اختاري الخدمة</option>${(options.services || []).map((service) => `<option value="${service.Id}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}`;
+  renderServices(options.services || []);
 };
 
 const updateSlots = async () => {
@@ -51,6 +56,16 @@ const updateSlots = async () => {
     const response = await publicBookingService.slots({ doctorId, serviceId, date });
     if (response.service) priceBox.innerHTML = `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">سعر الخدمة: <strong class="text-slate-900">${formatMoney(response.service.Price)}</strong></div>`;
     const slots = makeSlots(response.schedules?.[0], response.booked || [], Number(response.service?.BaseDurationMinutes || 15), date, response.pauses || [], response.exceptions || []).filter((slot) => slot.getTime() > Date.now());
+    const today = localDateKey();
+    const now = new Date();
+    const scheduleEnd = clockMinutes(response.schedules?.[0]?.EndTime);
+    if (!slots.length && date === today && scheduleEnd > 0 && (now.getHours() * 60 + now.getMinutes()) >= scheduleEnd) {
+      const nextDate = new Date(`${date}T12:00:00`);
+      nextDate.setDate(nextDate.getDate() + 1);
+      dateField.value = localDateKey(nextDate);
+      await updateSlots();
+      return;
+    }
     slotsBox.innerHTML = slots.length ? slots.map((slot) => `<button type="button" class="btn btn-secondary" data-slot="${slot.toISOString()}">${escapeHtml(formatSlot(slot))}</button>`).join('') : '<div class="col-span-full rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">لا توجد مواعيد متاحة في هذا اليوم. اختاري تاريخًا آخر.</div>';
     slotsBox.querySelectorAll('[data-slot]').forEach((button) => button.addEventListener('click', () => {
       slotsBox.querySelectorAll('[data-slot]').forEach((item) => item.classList.remove('!bg-blue-600', '!text-white'));
@@ -65,7 +80,22 @@ const updateSlots = async () => {
 dateField.value = localDateKey();
 dateField.min = dateField.value;
 renderOptions().catch((error) => showStatus(error.message || 'تعذر تحميل المواعيد المتاحة.'));
-doctorField.addEventListener('change', updateSlots);
+doctorField.addEventListener('change', async () => {
+  serviceField.value = '';
+  if (doctorField.value) {
+    try {
+      const options = await publicBookingService.options({ doctorId: doctorField.value });
+      renderServices(options.services || []);
+      if (!(options.services || []).length) {
+        slotsBox.innerHTML = '<div class="col-span-full rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">لا توجد خدمات مرتبطة بهذا الطبيب حاليًا.</div>';
+      }
+    } catch (error) {
+      renderServices([]);
+      slotsBox.innerHTML = `<div class="col-span-full p-5 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`;
+    }
+  }
+  updateSlots();
+});
 serviceField.addEventListener('change', updateSlots);
 dateField.addEventListener('change', updateSlots);
 

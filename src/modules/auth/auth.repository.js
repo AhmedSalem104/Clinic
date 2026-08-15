@@ -1,5 +1,6 @@
-const { query } = require('../../db/repository');
+const { query, withTransaction } = require('../../db/repository');
 const { sql } = require('../../db/connection');
+const { AppError } = require('../../utils/errors');
 
 const findByEmail = async (email) => {
   const result = await query(`
@@ -70,4 +71,37 @@ const updateUser = async (id, { fullName, email, role, doctorId, patientId, pass
   return result.recordset[0] || null;
 };
 
-module.exports = { findByEmail, findById, getManageableById, touchLastLogin, list, createUser, updateUser, updateStatus };
+const removeUser = async (id) => withTransaction(async (transaction) => {
+  const request = transaction.request().input('id', sql.Int, id);
+  const dependencyResult = await request.query(`
+    SELECT
+      (SELECT COUNT_BIG(1) FROM Documents WHERE UploadedBy=@id) AS DocumentsCount,
+      (SELECT COUNT_BIG(1) FROM Users WHERE Role=N'owner' AND IsActive=1 AND Id<>@id) AS OtherActiveOwnersCount;
+  `);
+  const dependencies = dependencyResult.recordset[0] || {};
+  if (Number(dependencies.DocumentsCount) > 0) {
+    throw new AppError(`لا يمكن حذف المستخدم نهائيًا لأنه رفع ${dependencies.DocumentsCount} مستندًا طبيًا. انقل ملكية المستندات أولًا أو عطّل الحساب.`, 409, 'USER_HAS_DOCUMENTS', { documentsCount: Number(dependencies.DocumentsCount) });
+  }
+  if (Number(dependencies.OtherActiveOwnersCount) === 0) {
+    throw new AppError('لا يمكن حذف آخر مالك نشط للعيادة. أضف مالكًا نشطًا آخر أولًا.', 409, 'LAST_ACTIVE_OWNER');
+  }
+
+  // Preserve operational and medical history while removing the login account.
+  await transaction.request().input('id', sql.Int, id).query(`
+    UPDATE AuditLogs SET UserId=NULL WHERE UserId=@id;
+    UPDATE Pricing SET CreatedBy=NULL WHERE CreatedBy=@id;
+    UPDATE PatientAssignments SET AssignedBy=NULL WHERE AssignedBy=@id;
+    UPDATE MedicalCases SET CreatedBy=NULL WHERE CreatedBy=@id;
+    UPDATE PatientGyneHistories SET RecordedBy=NULL WHERE RecordedBy=@id;
+    UPDATE ObstetricHistory SET RecordedBy=NULL WHERE RecordedBy=@id;
+    UPDATE Pregnancies SET CreatedBy=NULL WHERE CreatedBy=@id;
+    UPDATE Appointments SET CreatedBy=NULL WHERE CreatedBy=@id;
+    UPDATE DoctorPauses SET CreatedBy=NULL WHERE CreatedBy=@id;
+    UPDATE Notifications SET UserId=NULL WHERE UserId=@id;
+    UPDATE Settings SET UpdatedBy=NULL WHERE UpdatedBy=@id;
+  `);
+  const result = await transaction.request().input('id', sql.Int, id).query('DELETE FROM Users OUTPUT DELETED.Id, DELETED.FullName, DELETED.Email, DELETED.Role, DELETED.DoctorId, DELETED.PatientId WHERE Id=@id');
+  return result.recordset[0] || null;
+});
+
+module.exports = { findByEmail, findById, getManageableById, touchLastLogin, list, createUser, updateUser, updateStatus, removeUser };

@@ -5,6 +5,6 @@ const list = async (req, res) => { const p=getPagination(req.query); const resul
 const get = async (req,res)=>ok(res,await service.get(Number(req.params.id)));
 const create = async (req,res)=>created(res,await service.create(req.body,req));
 const update = async (req,res)=>ok(res,await service.update(Number(req.params.id),req.body,req));
-const remove = async (req,res)=>ok(res,await service.archive(Number(req.params.id),req));
+const remove = async (req,res)=>ok(res,await service.remove(Number(req.params.id),req));
 const setServices = async (req,res)=>ok(res,await service.setServices(Number(req.params.id),req.body.serviceIds,req));
 module.exports={list,get,create,update,remove,setServices};
