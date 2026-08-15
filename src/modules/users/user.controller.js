@@ -51,4 +51,14 @@ const status = async (req, res) => {
   return ok(res, { id, isActive: req.body.isActive });
 };
 
-module.exports = { list, create, update, status };
+const remove = async (req, res) => {
+  const id = Number(req.params.id);
+  if (id === req.user.id) throw new AppError('لا يمكن حذف حسابك الحالي.', 400, 'SELF_DELETION_NOT_ALLOWED');
+  const before = await repo.getManageableById(id);
+  if (!before) throw new AppError('المستخدم غير موجود.', 404, 'USER_NOT_FOUND');
+  await repo.updateStatus(id, false);
+  await recordAudit({ req, action: 'archive', entity: 'user', entityId: id, oldValue: before, newValue: { ...before, IsActive: false } });
+  return ok(res, { id, isActive: false });
+};
+
+module.exports = { list, create, update, status, remove };

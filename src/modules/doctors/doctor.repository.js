@@ -32,10 +32,16 @@ const update = async (id, data) => {
   return result.recordset[0] || null;
 };
 
+const archive = async (id) => {
+  const result = await query(`UPDATE Doctors SET Status=N'inactive', UpdatedAt=SYSUTCDATETIME()
+    OUTPUT INSERTED.* WHERE Id=@id`, (request) => request.input('id', sql.Int, id));
+  return result.recordset[0] || null;
+};
+
 const setServices = async (doctorId, serviceIds) => {
   await query('DELETE FROM DoctorServices WHERE DoctorId=@doctorId', (request) => request.input('doctorId', sql.Int, doctorId));
   for (const serviceId of serviceIds) await query('INSERT INTO DoctorServices (DoctorId, ServiceId) VALUES (@doctorId,@serviceId)', (request) => request.input('doctorId', sql.Int, doctorId).input('serviceId', sql.Int, serviceId));
   return getById(doctorId);
 };
 
-module.exports = { list, getById, create, update, setServices };
+module.exports = { list, getById, create, update, archive, setServices };

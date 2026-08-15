@@ -13,7 +13,8 @@ const list = async (req, res) => {
 const create = async (req, res) => created(res, await service.create(req.body, req));
 const getById = async (req, res) => ok(res, await service.getById(Number(req.params.id), req.user));
 const update = async (req, res) => ok(res, await service.update(Number(req.params.id), req.body, req));
+const remove = async (req, res) => ok(res, await service.archive(Number(req.params.id), req));
 const assign = async (req, res) => created(res, await service.assign({ ...req.body, patientId: Number(req.params.id) }, req));
 const assignments = async (req, res) => ok(res, await service.getAssignments(Number(req.params.id), req.user));
 
-module.exports = { list, create, getById, update, assign, assignments };
+module.exports = { list, create, getById, update, remove, assign, assignments };

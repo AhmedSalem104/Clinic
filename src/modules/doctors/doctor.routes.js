@@ -11,5 +11,6 @@ router.get('/',asyncHandler(controller.list));
 router.get('/:id',asyncHandler(controller.get));
 router.post('/',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(doctorSchema),asyncHandler(controller.create));
 router.patch('/:id',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(doctorSchema),asyncHandler(controller.update));
+router.delete('/:id',requirePermission(PERMISSIONS.MANAGE_CLINIC),asyncHandler(controller.remove));
 router.put('/:id/services',requirePermission(PERMISSIONS.MANAGE_CLINIC),validate(servicesSchema),asyncHandler(controller.setServices));
 module.exports={router};

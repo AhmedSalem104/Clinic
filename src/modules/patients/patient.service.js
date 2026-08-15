@@ -49,6 +49,14 @@ const update = async (id, body, req) => {
   return result.patient;
 };
 
+const archive = async (id, req) => {
+  const before = await repository.getArchiveTarget(id);
+  if (!before) throw new AppError('المريضة غير موجودة.', 404, 'PATIENT_NOT_FOUND');
+  const patient = await repository.archive(id);
+  await recordAudit({ req, action: 'archive', entity: 'patient', entityId: id, oldValue: before, newValue: patient });
+  return patient;
+};
+
 const assign = async (body, req) => {
   const previous = await repository.getAssignments(body.patientId);
   const assignment = await repository.assign({ ...body, assignedBy: req.user.id });
@@ -62,4 +70,4 @@ const getAssignments = async (patientId, user) => {
   return repository.getAssignments(patientId);
 };
 
-module.exports = { list, create, getById, update, assign, getAssignments, normalizeText, normalizePhone };
+module.exports = { list, create, getById, update, archive, assign, getAssignments, normalizeText, normalizePhone };

@@ -12,6 +12,7 @@ router.get('/', requireAnyPermission(PERMISSIONS.VIEW_ALL_PATIENTS, PERMISSIONS.
 router.post('/', requirePermission(PERMISSIONS.MANAGE_PATIENTS), validate(patientSchema), asyncHandler(controller.create));
 router.get('/:id', asyncHandler(controller.getById));
 router.patch('/:id', requirePermission(PERMISSIONS.MANAGE_PATIENTS), validate(patientSchema), asyncHandler(controller.update));
+router.delete('/:id', requirePermission(PERMISSIONS.MANAGE_PATIENTS), asyncHandler(controller.remove));
 router.get('/:id/assignments', asyncHandler(controller.assignments));
 router.post('/:id/assignments', requirePermission(PERMISSIONS.MANAGE_PATIENTS), validate(assignmentSchema), asyncHandler(controller.assign));
 

@@ -25,4 +25,13 @@ const update = async (req, res) => {
   return ok(res, row);
 };
 
-module.exports = { list, create, update };
+const remove = async (req, res) => {
+  const id = Number(req.params.id);
+  const before = await repo.getById(id);
+  if (!before) throw new AppError('السعر غير موجود.', 404, 'PRICING_NOT_FOUND');
+  const row = await repo.archive(id);
+  await recordAudit({ req, action: 'archive', entity: 'pricing', entityId: id, oldValue: before, newValue: row });
+  return ok(res, { id, isActive: false });
+};
+
+module.exports = { list, create, update, remove };

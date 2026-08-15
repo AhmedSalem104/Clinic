@@ -117,6 +117,18 @@ const update = async (id, data) => {
   return { patient: result.recordset[0], before: before.recordset[0] };
 };
 
+const archive = async (id) => {
+  const result = await query(`UPDATE Patients SET Status=N'archived', UpdatedAt=SYSUTCDATETIME()
+    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.Status, INSERTED.UpdatedAt
+    WHERE Id=@id`, (request) => request.input('id', sql.Int, id));
+  return result.recordset[0] || null;
+};
+
+const getArchiveTarget = async (id) => {
+  const result = await query('SELECT TOP 1 Id, PatientCode, FullName, Status, ProfileStatus FROM Patients WHERE Id=@id', (request) => request.input('id', sql.Int, id));
+  return result.recordset[0] || null;
+};
+
 const assign = async ({ patientId, doctorId, assignmentType, caseId, assignedBy }) => withTransaction(async (transaction) => {
   const doctor = await transaction.request().input('doctorId', sql.Int, doctorId).query('SELECT TOP 1 Id FROM Doctors WHERE Id=@doctorId AND Status=N\'active\'');
   if (!doctor.recordset[0]) throw new AppError('The selected doctor is not active.', 400, 'DOCTOR_NOT_ACTIVE');
@@ -140,4 +152,4 @@ const getAssignments = async (patientId) => {
   return result.recordset;
 };
 
-module.exports = { list, findPotentialDuplicates, create, getById, update, assign, getAssignments };
+module.exports = { list, findPotentialDuplicates, create, getById, update, archive, getArchiveTarget, assign, getAssignments };

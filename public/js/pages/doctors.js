@@ -1,5 +1,5 @@
 import { clinicService } from '../services/clinic-service.js';
-import { escapeHtml, emptyState, statusBadge, icon, toast, loadingButton, debounce, confirm } from '../core/ui.js';
+import { escapeHtml, emptyState, statusBadge, icon, toast, loadingButton, debounce, confirm, archiveButton } from '../core/ui.js';
 
 const formValue = (form, name) => form.elements[name]?.value || '';
 
@@ -45,6 +45,8 @@ export async function render(outlet) {
       pagination.innerHTML = `<div class="flex items-center justify-between"><span>عرض ${rows.length} من ${meta.total || 0}</span><div class="flex gap-2"><button class="btn btn-secondary text-xs" data-page="${Math.max(1, (meta.page || page) - 1)}" ${page <= 1 ? 'disabled' : ''}>السابق</button><span class="self-center">صفحة ${meta.page || page} من ${meta.totalPages || 1}</span><button class="btn btn-secondary text-xs" data-page="${Math.min(meta.totalPages || 1, (meta.page || page) + 1)}" ${page >= (meta.totalPages || 1) ? 'disabled' : ''}>التالي</button></div></div>`;
       table.querySelectorAll('[data-edit]').forEach((button) => button.addEventListener('click', async () => { try { openEditor(await clinicService.doctor(button.dataset.edit)); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تحميل الطبيب', text: error.message }); } }));
       table.querySelectorAll('[data-toggle]').forEach((button) => button.addEventListener('click', async () => { if (!(await confirm(`${button.dataset.next === 'active' ? 'تفعيل' : 'تعطيل'} الطبيب؟`, 'سيتم الاحتفاظ بالبيانات والحجوزات السابقة.', button.dataset.next === 'active' ? 'تفعيل' : 'تعطيل'))) return; try { const doctor = await clinicService.doctor(button.dataset.toggle); await clinicService.updateDoctor(button.dataset.toggle, { fullName: doctor.FullName, specialty: doctor.Specialty, phone: doctor.Phone, email: doctor.Email, bio: doctor.Bio, status: button.dataset.next }); toast('تم تحديث حالة الطبيب'); await load(page); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تحديث الحالة', text: error.message }); } }));
+      table.querySelectorAll('[data-toggle][data-next="inactive"]').forEach((toggle) => toggle.parentElement.append(archiveButton('archiveDoctor', toggle.dataset.toggle, 'حذف')));
+      table.querySelectorAll('[data-archive-doctor]').forEach((button) => button.addEventListener('click', async () => { if (!(await confirm('أرشفة الطبيب؟', 'سيتم إيقاف الطبيب مع الاحتفاظ بالمواعيد والسجل الطبي السابق.', 'حذف / أرشفة'))) return; try { await clinicService.deleteDoctor(button.dataset.archiveDoctor); toast('تمت أرشفة الطبيب'); await load(page); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر أرشفة الطبيب', text: error.message }); } }));
       table.querySelector('[data-empty-add]')?.addEventListener('click', () => openEditor());
       pagination.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => load(Number(button.dataset.page))));
     } catch (error) { table.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; }
