@@ -2,50 +2,10 @@ import { patientService } from '../services/patient-service.js';
 import { clinicService } from '../services/clinic-service.js';
 import { appointmentService } from '../services/appointment-service.js';
 import { auth } from '../core/auth.js';
+import { makeSlots } from '../utils/appointment-slots.mjs';
 import { escapeHtml, debounce, loadingButton, toast, emptyState, localDateKey } from '../core/ui.js';
 
 const localToIso = (value) => new Date(value).toISOString();
-const clockMinutes = (value) => {
-  const [hours = 0, minutes = 0] = String(value || '0:0').split(':').map(Number);
-  return hours * 60 + minutes;
-};
-const parseBreaks = (value) => {
-  try {
-    const parsed = typeof value === 'string' ? JSON.parse(value || '[]') : value;
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (_) {
-    return [];
-  }
-};
-
-const makeSlots = (schedule, booked, duration, date, pauses = [], exceptions = []) => {
-  if (!schedule || exceptions.some((item) => ['vacation', 'unavailable'].includes(item.ExceptionType))) return [];
-  const special = exceptions.find((item) => item.ExceptionType === 'special' && item.StartTime && item.EndTime);
-  const startMinute = clockMinutes(special?.StartTime || schedule.StartTime);
-  const endMinute = clockMinutes(special?.EndTime || schedule.EndTime);
-  const breaks = parseBreaks(schedule.BreaksJson);
-  const dayStart = new Date(`${date}T00:00:00`);
-  const output = [];
-
-  for (let minute = startMinute; minute + duration <= endMinute; minute += duration) {
-    const start = new Date(dayStart.getTime() + minute * 60000);
-    const end = new Date(start.getTime() + duration * 60000);
-    const overlapsBooking = booked.some((booking) => {
-      const bookingStart = new Date(booking.StartAt).getTime();
-      const bookingEnd = bookingStart + Number(booking.ExpectedDurationMinutes || duration) * 60000;
-      return start.getTime() < bookingEnd && end.getTime() > bookingStart;
-    });
-    const overlapsBreak = breaks.some((item) => {
-      const breakStart = clockMinutes(item.start || item.StartTime || item.from);
-      const breakEnd = clockMinutes(item.end || item.EndTime || item.to);
-      return minute < breakEnd && minute + duration > breakStart;
-    });
-    const overlapsPause = pauses.some((pause) => start.getTime() < new Date(pause.EndAt).getTime() && end.getTime() > new Date(pause.StartedAt).getTime());
-    if (!overlapsBooking && !overlapsBreak && !overlapsPause) output.push(start);
-  }
-  return output;
-};
-
 export async function render(outlet) {
   const query = new URLSearchParams(window.location.search);
   const currentUser = auth.user();
@@ -64,12 +24,15 @@ export async function render(outlet) {
   const form = document.querySelector('#appointment-form');
   const patientInput = document.querySelector('#patient-search-booking');
   const results = document.querySelector('#patient-results');
+  let patientIdField = form.elements.namedItem('patientId');
+  const startAtField = form.elements.namedItem('startAt');
   if (isPatientBooking) {
     if (!currentUser.patientId) throw new Error('This patient account is not linked to an active patient record.');
     const patientField = patientInput?.closest('.span-2');
     if (patientField) {
       patientField.innerHTML = `<label class="form-label">Patient</label><div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(currentUser.fullName)}</strong><span class="mx-2 text-blue-300">·</span>Your account</div><input type="hidden" name="patientId" value="${escapeHtml(currentUser.patientId)}" />`;
     }
+    patientIdField = form.elements.namedItem('patientId');
     form.bookingSource.value = 'online';
     form.bookingSource.parentElement.classList.add('hidden');
     form.notes.closest('.span-2')?.classList.add('hidden');
@@ -97,7 +60,7 @@ export async function render(outlet) {
   if (queryPatient && !isPatientBooking) await showSelected(queryPatient);
   if (rescheduleId) {
     const existing = await appointmentService.get(rescheduleId);
-    form.patientId.value = existing.PatientId;
+    patientIdField.value = existing.PatientId;
     form.doctorId.value = existing.DoctorId;
     form.serviceId.value = existing.ServiceId;
     form.date.value = localDateKey(existing.StartAt);
@@ -115,7 +78,7 @@ export async function render(outlet) {
       const response = await patientService.list({ search, page: 1, pageSize: 8 });
       results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="p-3 text-xs text-slate-500">No patients found.</div>';
       results.querySelectorAll('[data-patient-id]').forEach((button) => button.addEventListener('click', () => {
-        form.patientId.value = button.dataset.patientId;
+        patientIdField.value = button.dataset.patientId;
         patientInput.value = '';
         results.innerHTML = '';
         showSelected(button.dataset.patientId);
@@ -131,7 +94,7 @@ export async function render(outlet) {
     const date = form.date.value;
     const box = document.querySelector('#available-slots');
     const priceBox = document.querySelector('#booking-price');
-    form.startAt.value = '';
+    startAtField.value = '';
     if (!doctorId || !serviceId || !date) { box.innerHTML = emptyState('Select a doctor, service and date.'); if (priceBox) priceBox.innerHTML = ''; return; }
     box.innerHTML = '<div class="text-xs text-slate-500">Loading available slots…</div>';
     try {
@@ -142,7 +105,7 @@ export async function render(outlet) {
       box.querySelectorAll('[data-slot]').forEach((button) => button.addEventListener('click', () => {
         box.querySelectorAll('[data-slot]').forEach((item) => item.classList.remove('!bg-blue-600', '!text-white'));
         button.classList.add('!bg-blue-600', '!text-white');
-        form.startAt.value = button.dataset.slot;
+        startAtField.value = button.dataset.slot;
       }));
     } catch (error) {
       box.innerHTML = `<div class="text-xs text-red-600">${escapeHtml(error.message)}</div>`;
@@ -154,16 +117,19 @@ export async function render(outlet) {
   form.date.addEventListener('change', updateSlots);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!form.patientId.value || !form.startAt.value) {
-      window.Swal.fire({ icon: 'warning', title: 'Missing booking data', text: 'Select a patient and an available slot.' });
+    const patientId = isPatientBooking ? Number(currentUser?.patientId) : Number(patientIdField?.value);
+    const selectedStartAt = startAtField?.value || '';
+    if (!patientId || !selectedStartAt) {
+      const missingMessage = !patientId ? 'Your patient account is not linked correctly.' : 'Select an available slot before confirming the booking.';
+      window.Swal.fire({ icon: 'warning', title: 'Missing booking data', text: missingMessage });
       return;
     }
     const button = form.querySelector('button[type=submit]');
     loadingButton(button, true);
     try {
       let appointment;
-      if (form.dataset.rescheduleId) appointment = await appointmentService.reschedule(form.dataset.rescheduleId, { startAt: localToIso(form.startAt.value) });
-      else appointment = await appointmentService.create({ patientId: Number(form.patientId.value), doctorId: Number(form.doctorId.value), serviceId: Number(form.serviceId.value), bookingSource: form.bookingSource.value, startAt: localToIso(form.startAt.value), notes: form.notes.value || null });
+      if (form.dataset.rescheduleId) appointment = await appointmentService.reschedule(form.dataset.rescheduleId, { startAt: localToIso(selectedStartAt) });
+      else appointment = await appointmentService.create({ patientId, doctorId: Number(form.doctorId.value), serviceId: Number(form.serviceId.value), bookingSource: form.bookingSource.value, startAt: localToIso(selectedStartAt), notes: form.notes.value || null });
       if (isPatientBooking && appointment) {
         const trackingUrl = appointment.PublicTrackingToken ? `${window.location.origin}/queue-tracking.html?token=${encodeURIComponent(appointment.PublicTrackingToken)}` : null;
         await window.Swal.fire({ icon: 'success', title: 'Booking confirmed', text: `Appointment #${appointment.Id} has been created.${trackingUrl ? ' You can follow your queue from the link in your appointments.' : ''}`, confirmButtonText: 'View my appointments' });
@@ -171,7 +137,11 @@ export async function render(outlet) {
       toast(form.dataset.rescheduleId ? 'Appointment rescheduled' : 'Booking confirmed');
       window.clinicApp.navigate(isPatientBooking ? '/patient-portal' : '/appointments');
     } catch (error) {
-      window.Swal.fire({ icon: 'error', title: 'Booking could not be created', text: error.message });
+      if (['OVERLAPPING_BOOKING', 'DOUBLE_BOOKING', 'DOCTOR_PAUSED', 'SCHEDULE_UNAVAILABLE'].includes(error.code)) {
+        startAtField.value = '';
+        await updateSlots();
+      }
+      window.Swal.fire({ icon: 'error', title: error.code === 'OVERLAPPING_BOOKING' ? 'Selected slot is no longer available' : 'Booking could not be created', text: error.message });
     } finally { loadingButton(button, false); }
   });
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
