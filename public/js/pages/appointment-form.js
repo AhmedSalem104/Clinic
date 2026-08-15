@@ -19,7 +19,7 @@ export async function render(outlet) {
   ]);
   const today = localDateKey();
 
-  outlet.innerHTML = `<div class="section-heading"><div><h1>New booking</h1><p>Select the patient, doctor, service, date and an available slot.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">Back to appointments</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><label class="form-label">Patient <span class="text-red-500">*</span></label><input id="patient-search-booking" class="input" placeholder="Search by name, phone or patient ID" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div></div><div><label class="form-label">Doctor <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">Select doctor</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">Service <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">Select service</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} min</option>`).join('')}</select></div><div><label class="form-label">Date <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">Booking source</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>Reception</option><option value="phone">Phone</option><option value="online">Online</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>Walk-in</option></select></div><div class="span-2"><label class="form-label">Available slots</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('Select a doctor, service and date.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">Operational notes</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="Do not enter diagnosis or sensitive clinical notes here."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">Confirm booking</button></div></form>`;
+  outlet.innerHTML = `<div class="section-heading"><div><h1>حجز جديد</h1><p>اختاري المريضة والطبيب والخدمة والتاريخ والموعد المتاح.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">العودة إلى الحجوزات</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><label class="form-label">المريضة <span class="text-red-500">*</span></label><input id="patient-search-booking" class="input" placeholder="ابحثي بالاسم أو الهاتف أو معرّف المريضة" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div></div><div><label class="form-label">الطبيب <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">اختاري الطبيب</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">الخدمة <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">اختاري الخدمة</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}</select></div><div><label class="form-label">التاريخ <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">مصدر الحجز</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>الريسبشن</option><option value="phone">هاتف</option><option value="online">إلكتروني</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>بدون موعد</option></select></div><div class="span-2"><label class="form-label">المواعيد المتاحة</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('اختاري الطبيب والخدمة والتاريخ.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">ملاحظات تشغيلية</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="لا تكتبي تشخيصًا أو ملاحظات طبية حساسة هنا."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">تأكيد الحجز</button></div></form>`;
 
   const form = document.querySelector('#appointment-form');
   const patientInput = document.querySelector('#patient-search-booking');
@@ -30,7 +30,7 @@ export async function render(outlet) {
     if (!currentUser.patientId) throw new Error('This patient account is not linked to an active patient record.');
     const patientField = patientInput?.closest('.span-2');
     if (patientField) {
-      patientField.innerHTML = `<label class="form-label">Patient</label><div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(currentUser.fullName)}</strong><span class="mx-2 text-blue-300">·</span>Your account</div><input type="hidden" name="patientId" value="${escapeHtml(currentUser.patientId)}" />`;
+      patientField.innerHTML = `<label class="form-label">المريضة</label><div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(currentUser.fullName)}</strong><span class="mx-2 text-blue-300">·</span>حسابك</div><input type="hidden" name="patientId" value="${escapeHtml(currentUser.patientId)}" />`;
     }
     patientIdField = form.elements.namedItem('patientId');
     form.bookingSource.value = 'online';
@@ -39,9 +39,9 @@ export async function render(outlet) {
     const heading = document.querySelector('.section-heading h1');
     const description = heading?.nextElementSibling;
     const backLink = document.querySelector('.section-heading a');
-    if (heading) heading.textContent = 'Book a new appointment';
-    if (description) description.textContent = 'Choose your doctor, service, date and an available slot.';
-    if (backLink) { backLink.href = '/patient-portal'; backLink.dataset.route = '/patient-portal'; backLink.textContent = 'Back to my appointments'; }
+    if (heading) heading.textContent = 'حجز موعد جديد';
+    if (description) description.textContent = 'اختاري الطبيب والخدمة والتاريخ والموعد المتاح.';
+    if (backLink) { backLink.href = '/patient-portal'; backLink.dataset.route = '/patient-portal'; backLink.textContent = 'العودة إلى مواعيدي'; }
   }
   const slotsBox = document.querySelector('#available-slots');
   if (slotsBox) {
@@ -67,8 +67,8 @@ export async function render(outlet) {
     form.bookingSource.value = existing.BookingSource || 'reception';
     form.dataset.rescheduleId = rescheduleId;
     await showSelected(existing.PatientId);
-    document.querySelector('.section-heading h1').textContent = 'Reschedule appointment';
-    form.querySelector('button[type=submit]').textContent = 'Save reschedule';
+    document.querySelector('.section-heading h1').textContent = 'إعادة جدولة الموعد';
+    form.querySelector('button[type=submit]').textContent = 'حفظ إعادة الجدولة';
   }
 
   if (!isPatientBooking) patientInput.addEventListener('input', debounce(async () => {
@@ -76,7 +76,7 @@ export async function render(outlet) {
     if (search.length < 2) { results.innerHTML = ''; return; }
     try {
       const response = await patientService.list({ search, page: 1, pageSize: 8 });
-      results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="p-3 text-xs text-slate-500">No patients found.</div>';
+      results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="p-3 text-xs text-slate-500">لا توجد مريضات مطابقة.</div>';
       results.querySelectorAll('[data-patient-id]').forEach((button) => button.addEventListener('click', () => {
         patientIdField.value = button.dataset.patientId;
         patientInput.value = '';
@@ -95,13 +95,13 @@ export async function render(outlet) {
     const box = document.querySelector('#available-slots');
     const priceBox = document.querySelector('#booking-price');
     startAtField.value = '';
-    if (!doctorId || !serviceId || !date) { box.innerHTML = emptyState('Select a doctor, service and date.'); if (priceBox) priceBox.innerHTML = ''; return; }
-    box.innerHTML = '<div class="text-xs text-slate-500">Loading available slots…</div>';
+    if (!doctorId || !serviceId || !date) { box.innerHTML = emptyState('اختاري الطبيب والخدمة والتاريخ.'); if (priceBox) priceBox.innerHTML = ''; return; }
+    box.innerHTML = '<div class="text-xs text-slate-500">جاري تحميل المواعيد المتاحة…</div>';
     try {
       const response = await appointmentService.slots({ doctorId, serviceId, date });
-      if (priceBox) priceBox.innerHTML = response.service?.Price !== undefined ? `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">Price: <strong class="text-slate-900">${Number(response.service.Price || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>` : '';
+      if (priceBox) priceBox.innerHTML = response.service?.Price !== undefined ? `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">السعر: <strong class="text-slate-900">${Number(response.service.Price || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2 })} ج.م</strong></div>` : '';
       const slots = makeSlots(response.schedules?.[0], response.booked || [], Number(response.service?.BaseDurationMinutes || 15), date, response.pauses || [], response.exceptions || []);
-      box.innerHTML = slots.length ? slots.map((slot) => `<button type="button" class="btn btn-secondary" data-slot="${slot.toISOString()}">${slot.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</button>`).join('') : emptyState('No slots are available for this date.');
+      box.innerHTML = slots.length ? slots.map((slot) => `<button type="button" class="btn btn-secondary" data-slot="${slot.toISOString()}">${slot.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</button>`).join('') : emptyState('لا توجد مواعيد متاحة في هذا التاريخ.');
       box.querySelectorAll('[data-slot]').forEach((button) => button.addEventListener('click', () => {
         box.querySelectorAll('[data-slot]').forEach((item) => item.classList.remove('!bg-blue-600', '!text-white'));
         button.classList.add('!bg-blue-600', '!text-white');
@@ -120,8 +120,8 @@ export async function render(outlet) {
     const patientId = isPatientBooking ? Number(currentUser?.patientId) : Number(patientIdField?.value);
     const selectedStartAt = startAtField?.value || '';
     if (!patientId || !selectedStartAt) {
-      const missingMessage = !patientId ? 'Your patient account is not linked correctly.' : 'Select an available slot before confirming the booking.';
-      window.Swal.fire({ icon: 'warning', title: 'Missing booking data', text: missingMessage });
+      const missingMessage = !patientId ? 'حساب المريضة غير مرتبط بشكل صحيح.' : 'اختاري موعدًا متاحًا قبل تأكيد الحجز.';
+      window.Swal.fire({ icon: 'warning', title: 'بيانات الحجز ناقصة', text: missingMessage });
       return;
     }
     const button = form.querySelector('button[type=submit]');
@@ -132,16 +132,16 @@ export async function render(outlet) {
       else appointment = await appointmentService.create({ patientId, doctorId: Number(form.doctorId.value), serviceId: Number(form.serviceId.value), bookingSource: form.bookingSource.value, startAt: localToIso(selectedStartAt), notes: form.notes.value || null });
       if (isPatientBooking && appointment) {
         const trackingUrl = appointment.PublicTrackingToken ? `${window.location.origin}/queue-tracking.html?token=${encodeURIComponent(appointment.PublicTrackingToken)}` : null;
-        await window.Swal.fire({ icon: 'success', title: 'Booking confirmed', text: `Appointment #${appointment.Id} has been created.${trackingUrl ? ' You can follow your queue from the link in your appointments.' : ''}`, confirmButtonText: 'View my appointments' });
+        await window.Swal.fire({ icon: 'success', title: 'تم تأكيد الحجز', text: `تم إنشاء الموعد رقم #${appointment.Id}.${trackingUrl ? ' يمكنك متابعة دورك من رابط المتابعة في مواعيدك.' : ''}`, confirmButtonText: 'عرض مواعيدي' });
       }
-      toast(form.dataset.rescheduleId ? 'Appointment rescheduled' : 'Booking confirmed');
+      toast(form.dataset.rescheduleId ? 'تمت إعادة جدولة الموعد' : 'تم تأكيد الحجز');
       window.clinicApp.navigate(isPatientBooking ? '/patient-portal' : '/appointments');
     } catch (error) {
       if (['OVERLAPPING_BOOKING', 'DOUBLE_BOOKING', 'DOCTOR_PAUSED', 'SCHEDULE_UNAVAILABLE'].includes(error.code)) {
         startAtField.value = '';
         await updateSlots();
       }
-      window.Swal.fire({ icon: 'error', title: error.code === 'OVERLAPPING_BOOKING' ? 'Selected slot is no longer available' : 'Booking could not be created', text: error.message });
+      window.Swal.fire({ icon: 'error', title: error.code === 'OVERLAPPING_BOOKING' ? 'الموعد لم يعد متاحًا' : 'تعذر إنشاء الحجز', text: error.message });
     } finally { loadingButton(button, false); }
   });
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));

@@ -48,12 +48,26 @@ BEGIN
     Address NVARCHAR(500) NULL,
     EmergencyContactName NVARCHAR(160) NULL,
     EmergencyContactPhone NVARCHAR(40) NULL,
+    RegistrationSource NVARCHAR(30) NOT NULL CONSTRAINT DF_Patients_RegistrationSource DEFAULT N'reception',
+    ProfileStatus NVARCHAR(20) NOT NULL CONSTRAINT DF_Patients_ProfileStatus DEFAULT N'complete',
     Status NVARCHAR(30) NOT NULL CONSTRAINT DF_Patients_Status DEFAULT N'active',
     HighRiskFlag BIT NOT NULL CONSTRAINT DF_Patients_HighRisk DEFAULT 0,
     CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Patients_CreatedAt DEFAULT SYSUTCDATETIME(),
     UpdatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Patients_UpdatedAt DEFAULT SYSUTCDATETIME(),
     CONSTRAINT UQ_Patients_PatientCode UNIQUE (PatientCode)
   );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'RegistrationSource') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD RegistrationSource NVARCHAR(30) NOT NULL CONSTRAINT DF_Patients_RegistrationSource DEFAULT N'reception' WITH VALUES;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'ProfileStatus') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD ProfileStatus NVARCHAR(20) NOT NULL CONSTRAINT DF_Patients_ProfileStatus DEFAULT N'complete' WITH VALUES;
 END;
 GO
 
@@ -687,6 +701,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Patients_NormalizedPh
   CREATE INDEX IX_Patients_NormalizedPhone ON dbo.Patients (NormalizedPhone);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Patients_NormalizedName' AND object_id = OBJECT_ID(N'dbo.Patients'))
   CREATE INDEX IX_Patients_NormalizedName ON dbo.Patients (NormalizedName, Id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Patients_ProfileStatus' AND object_id = OBJECT_ID(N'dbo.Patients'))
+  CREATE INDEX IX_Patients_ProfileStatus ON dbo.Patients (ProfileStatus, CreatedAt DESC) INCLUDE (PatientCode, FullName, Phone, RegistrationSource);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Appointments_DoctorDateStatus' AND object_id = OBJECT_ID(N'dbo.Appointments'))
   CREATE INDEX IX_Appointments_DoctorDateStatus ON dbo.Appointments (DoctorId, StartAt, Status) INCLUDE (PatientId, ServiceId, ExpectedDurationMinutes);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Appointments_PatientDate' AND object_id = OBJECT_ID(N'dbo.Appointments'))

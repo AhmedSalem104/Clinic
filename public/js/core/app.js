@@ -15,10 +15,10 @@ const navSections = [
   { title: 'حساب المريضة', items: [{ route:'/patient-portal', label:'مواعيدي ومتابعة الدور', icon:'calendar', roles:['patient'] }] },
   { title: 'نظرة عامة', items: [{ route:'/dashboard', label:'لوحة التحكم', icon:'grid' }] },
   { title: 'المرضى', items: [{ route:'/patients', label:'كل المرضى', icon:'users', permission:'patients:view_all' }, { route:'/patients/new', label:'إضافة مريضة', icon:'plus', permission:'patients:manage' }, { route:'/assignments', label:'التخصيصات', icon:'users', permission:'patients:manage' }] },
-  { title: 'الحجوزات', items: [{ route:'/appointments', label:'التقويم والحجوزات', icon:'calendar', permission:'appointments:manage' }, { route:'/appointments/new', label:'حجز جديد', icon:'plus', permission:'appointments:manage' }, { route:'/queue', label:'الطابور', icon:'clock', permission:'queue:manage' }] },
-  { title: 'السجل الطبي', medical:true, items: [{ route:'/visits', label:'الزيارات', icon:'medical' }, { route:'/cases', label:'الحالات', icon:'medical' }, { route:'/pregnancy', label:'الحمل', icon:'medical' }, { route:'/history', label:'التاريخ النسائي والولادي', icon:'medical' }, { route:'/medications', label:'الأدوية', icon:'medical' }, { route:'/allergies', label:'الحساسيات', icon:'shield' }, { route:'/labs', label:'التحاليل', icon:'medical' }, { route:'/ultrasound', label:'السونار', icon:'medical' }, { route:'/documents', label:'المستندات', icon:'medical' }, { route:'/progress', label:'التطور', icon:'medical' }] },
-  { title: 'إدارة العيادة', items: [{ route:'/doctors', label:'الأطباء', icon:'doctor', ownerOnly:true }, { route:'/schedules', label:'الجداول', icon:'calendar', roles:['owner','doctor'] }, { route:'/services', label:'الخدمات', icon:'medical', roles:['owner','doctor','reception'] }, { route:'/pricing', label:'الأسعار', icon:'calendar', roles:['owner','doctor','reception'] }] },
-  { title: 'الإدارة', items: [{ route:'/reports', label:'التقارير', icon:'medical', permission:'reports:view' }, { route:'/notifications', label:'التنبيهات', icon:'bell' }, { route:'/users', label:'المستخدمون والصلاحيات', icon:'users', ownerOnly:true }, { route:'/settings', label:'الإعدادات', icon:'shield', ownerOnly:true }] }
+  { title: 'الحجوزات', items: [{ route:'/appointments', label:'التقويم والحجوزات', icon:'calendar', permission:'appointments:view_assigned' }, { route:'/appointments/new', label:'حجز جديد', icon:'plus', permission:'appointments:manage' }, { route:'/queue', label:'الطابور', icon:'clock', permission:'queue:manage' }] },
+  { title: 'السجل الطبي', medical:true, items: [{ route:'/visits', label:'الزيارات', icon:'clipboard' }, { route:'/cases', label:'الحالات', icon:'medical' }, { route:'/pregnancy', label:'الحمل', icon:'medical' }, { route:'/history', label:'التاريخ النسائي والولادي', icon:'medical' }, { route:'/medications', label:'الأدوية', icon:'medical' }, { route:'/allergies', label:'الحساسيات', icon:'shield' }, { route:'/labs', label:'التحاليل', icon:'clipboard' }, { route:'/ultrasound', label:'السونار', icon:'medical' }, { route:'/documents', label:'المستندات', icon:'file' }, { route:'/progress', label:'التطور', icon:'report' }] },
+  { title: 'إدارة العيادة', items: [{ route:'/doctors', label:'الأطباء', icon:'doctor', ownerOnly:true }, { route:'/schedules', label:'الجداول', icon:'calendar', roles:['owner','doctor'] }, { route:'/services', label:'الخدمات', icon:'tag', roles:['owner','doctor','reception'] }, { route:'/pricing', label:'الأسعار', icon:'tag', roles:['owner','doctor','reception'] }] },
+  { title: 'الإدارة', items: [{ route:'/reports', label:'التقارير', icon:'report', permission:'reports:view' }, { route:'/notifications', label:'التنبيهات', icon:'bell' }, { route:'/users', label:'المستخدمون والصلاحيات', icon:'users', ownerOnly:true }, { route:'/settings', label:'الإعدادات', icon:'settings', ownerOnly:true }] }
 ];
 
 const closeSidebar = () => { sidebar.classList.remove('open'); overlay.classList.add('hidden'); };
@@ -53,6 +53,11 @@ const renderLogin = () => {
   patientRegistrationLink.className = 'mt-4 block text-center text-xs font-semibold text-blue-600 hover:underline';
   patientRegistrationLink.textContent = 'إنشاء حساب مريضة جديد';
   loginView.querySelector('.login-card')?.append(patientRegistrationLink);
+  const publicBookingLink = document.createElement('a');
+  publicBookingLink.href = '/patient-booking.html';
+  publicBookingLink.className = 'mt-3 block text-center text-sm font-semibold text-slate-700 hover:text-blue-600';
+  publicBookingLink.textContent = 'حجز موعد بدون تسجيل دخول';
+  loginView.querySelector('.login-card')?.append(publicBookingLink);
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
   document.querySelector('#login-form').addEventListener('submit', async (event) => {

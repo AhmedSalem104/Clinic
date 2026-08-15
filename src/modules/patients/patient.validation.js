@@ -9,6 +9,7 @@ const patientSchema = z.object({
   address: z.string().max(500).optional().nullable(),
   emergencyContactName: z.string().max(160).optional().nullable(),
   emergencyContactPhone: z.string().max(40).optional().nullable(),
+  profileStatus: z.enum(['incomplete', 'complete']).optional(),
   confirmDuplicate: z.boolean().optional()
 });
 

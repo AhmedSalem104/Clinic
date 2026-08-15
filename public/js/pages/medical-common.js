@@ -12,16 +12,16 @@ const input = (label, name, type = 'text', options = {}) => {
 const renderPatientPicker = async (outlet, config, initialPatientId) => {
   let selected = null;
   if (initialPatientId) {
-    try { selected = await patientService.get(initialPatientId); } catch (_) { /* picker remains empty */ }
+    try { selected = await patientService.get(initialPatientId); } catch (_) { /* يظل اختيار المريضة متاحًا */ }
   }
 
-  outlet.innerHTML = `<div class="section-heading"><div><h1>${config.title}</h1><p>${config.description}</p></div>${config.allowAdd !== false ? `<button id="show-medical-form" class="btn btn-primary">${icon('plus')} إضافة سجل</button>` : ''}</div><section class="card p-4"><label class="form-label">اختر المريضة لفتح الوحدة</label><div class="relative"><input id="medical-patient-search" class="input" placeholder="الاسم، الهاتف أو Patient ID" value="${selected ? escapeHtml(selected.FullName) : ''}"><div id="medical-patient-results" class="absolute inset-x-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg"></div></div><div id="medical-selected" class="mt-3">${selected ? `<div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(selected.FullName)}</strong> · ${escapeHtml(selected.PatientCode)} · ${escapeHtml(selected.Phone)}</div>` : '<div class="text-xs text-slate-500">لم يتم اختيار مريضة.</div>'}</div></section><section id="medical-form-wrap" class="card p-5 mt-5 hidden"></section><section id="medical-list-wrap" class="card mt-5"></section>`;
+  outlet.innerHTML = `<div class="section-heading"><div><h1>${icon(config.icon || 'medical')}${config.title}</h1><p>${config.description}</p></div>${config.allowAdd !== false ? `<button id="show-medical-form" class="btn btn-primary">${icon('plus')} إضافة سجل</button>` : ''}</div><section class="card p-4"><label class="form-label">اختاري المريضة لفتح الوحدة</label><div class="relative"><input id="medical-patient-search" class="input" placeholder="الاسم أو الهاتف أو معرّف المريضة" value="${selected ? escapeHtml(selected.FullName) : ''}"><div id="medical-patient-results" class="absolute inset-x-0 top-full z-10 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg"></div></div><div id="medical-selected" class="mt-3">${selected ? `<div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(selected.FullName)}</strong> · ${escapeHtml(selected.PatientCode)} · ${escapeHtml(selected.Phone)}</div>` : '<div class="text-xs text-slate-500">لم يتم اختيار مريضة.</div>'}</div></section><section id="medical-form-wrap" class="card p-5 mt-5 hidden"></section><section id="medical-list-wrap" class="card mt-5"></section>`;
 
   const results = document.querySelector('#medical-patient-results');
   const search = document.querySelector('#medical-patient-search');
   const loadData = async () => {
     const list = document.querySelector('#medical-list-wrap');
-    if (!selected) { list.innerHTML = emptyState('اختر مريضة لعرض السجلات.'); return; }
+    if (!selected) { list.innerHTML = emptyState('اختاري مريضة لعرض السجلات.'); return; }
     list.innerHTML = '<div class="p-8"><div class="skeleton h-5 w-full mb-4"></div><div class="skeleton h-5 w-2/3"></div></div>';
     try { list.innerHTML = config.table((await config.load(selected.Id)) || []); }
     catch (error) { list.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; }
@@ -45,11 +45,11 @@ const renderPatientPicker = async (outlet, config, initialPatientId) => {
   }, 350));
 
   document.querySelector('#show-medical-form')?.addEventListener('click', async () => {
-    if (!selected) { window.Swal.fire({ icon: 'info', title: 'اختر المريضة أولًا' }); return; }
+    if (!selected) { window.Swal.fire({ icon: 'info', title: 'اختاري المريضة أولًا' }); return; }
     const wrapper = document.querySelector('#medical-form-wrap');
     wrapper.classList.toggle('hidden');
     if (wrapper.classList.contains('hidden')) return;
-    wrapper.innerHTML = `<div class="flex items-center justify-between mb-5"><div><h2 class="font-semibold">${config.formTitle || 'إضافة سجل'}</h2><p class="mt-1 text-xs text-slate-500">يتم حفظ القيم المهيكلة للتقارير، والنص الحر للسياق السريري فقط.</p></div><button type="button" class="btn btn-ghost" id="hide-medical-form">إغلاق</button></div><form id="medical-form" class="form-grid">${config.form(selected).join('')}<div class="span-2 mt-2 flex justify-end"><button class="btn btn-primary" type="submit">حفظ السجل</button></div></form>`;
+    wrapper.innerHTML = `<div class="flex items-center justify-between mb-5"><div><h2 class="font-semibold">${config.formTitle || 'إضافة سجل'}</h2><p class="mt-1 text-xs text-slate-500">تُحفظ القيم المهيكلة للتقارير، ويُستخدم النص الحر للسياق السريري فقط.</p></div><button type="button" class="btn btn-ghost" id="hide-medical-form">إغلاق</button></div><form id="medical-form" class="form-grid">${config.form(selected).join('')}<div class="span-2 mt-2 flex justify-end"><button class="btn btn-primary" type="submit">${icon('save')} حفظ السجل</button></div></form>`;
     if (config.afterForm) await config.afterForm(wrapper, selected);
     wrapper.querySelector('#hide-medical-form').addEventListener('click', () => wrapper.classList.add('hidden'));
     wrapper.querySelector('#medical-form').addEventListener('submit', async (event) => {

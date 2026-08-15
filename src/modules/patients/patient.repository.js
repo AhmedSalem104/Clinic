@@ -9,7 +9,7 @@ const doctorScope = (user, alias = 'p') => user?.role === 'doctor' ? `AND EXISTS
 const list = async ({ user, search, pageSize, offset, sortColumn, sortDirection }) => {
   const scope = doctorScope(user);
   const result = await query(`
-    SELECT p.Id, p.PatientCode, p.FullName, p.DateOfBirth, p.Phone, p.HighRiskFlag, p.Status,
+    SELECT p.Id, p.PatientCode, p.FullName, p.DateOfBirth, p.Phone, p.HighRiskFlag, p.Status, p.ProfileStatus, p.RegistrationSource,
       primaryDoctor.FullName AS AssignedDoctor,
       currentCase.Type AS CurrentCase,
       lastVisit.CreatedAt AS LastVisit,
@@ -51,9 +51,9 @@ const findPotentialDuplicates = async ({ phone, normalizedName, dateOfBirth }) =
 
 const create = async (data) => {
   const result = await query(`
-    INSERT INTO Patients (PatientCode, FullName, NormalizedName, DateOfBirth, Phone, NormalizedPhone, AlternatePhone, PreferredContactChannel, Address, EmergencyContactName, EmergencyContactPhone)
-    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status, INSERTED.CreatedAt
-    VALUES (@patientCode, @fullName, @normalizedName, @dateOfBirth, @phone, @normalizedPhone, @alternatePhone, @preferredContactChannel, @address, @emergencyContactName, @emergencyContactPhone)
+    INSERT INTO Patients (PatientCode, FullName, NormalizedName, DateOfBirth, Phone, NormalizedPhone, AlternatePhone, PreferredContactChannel, Address, EmergencyContactName, EmergencyContactPhone, RegistrationSource, ProfileStatus)
+    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource, INSERTED.CreatedAt
+    VALUES (@patientCode, @fullName, @normalizedName, @dateOfBirth, @phone, @normalizedPhone, @alternatePhone, @preferredContactChannel, @address, @emergencyContactName, @emergencyContactPhone, @registrationSource, @profileStatus)
   `, (request) => request.input('patientCode', sql.NVarChar(30), data.patientCode)
     .input('fullName', sql.NVarChar(180), data.fullName)
     .input('normalizedName', sql.NVarChar(180), data.normalizedName)
@@ -64,7 +64,9 @@ const create = async (data) => {
     .input('preferredContactChannel', sql.NVarChar(20), data.preferredContactChannel || null)
     .input('address', sql.NVarChar(500), data.address || null)
     .input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
-    .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null));
+    .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
+    .input('registrationSource', sql.NVarChar(30), data.registrationSource || 'reception')
+    .input('profileStatus', sql.NVarChar(20), data.profileStatus || 'complete'));
   return result.recordset[0];
 };
 
@@ -72,7 +74,7 @@ const getById = async (id, user) => {
   const scope = doctorScope(user);
   const result = await query(`
     SELECT p.Id, p.PatientCode, p.FullName, p.DateOfBirth, p.Phone, p.AlternatePhone, p.PreferredContactChannel,
-      p.Address, p.EmergencyContactName, p.EmergencyContactPhone, p.HighRiskFlag, p.Status, p.CreatedAt,
+      p.Address, p.EmergencyContactName, p.EmergencyContactPhone, p.HighRiskFlag, p.Status, p.ProfileStatus, p.RegistrationSource, p.CreatedAt,
       primaryDoctor.Id AS AssignedDoctorId, primaryDoctor.FullName AS AssignedDoctor,
       activeCase.Id AS CurrentCaseId, activeCase.Type AS CurrentCase, activeCase.Status AS CurrentCaseStatus,
       latestVisit.Id AS LatestVisitId, latestVisit.CreatedAt AS LatestVisitDate, latestVisit.Diagnosis AS LatestDiagnosis,
@@ -101,15 +103,17 @@ const update = async (id, data) => {
   const result = await query(`
     UPDATE Patients SET FullName=@fullName, NormalizedName=@normalizedName, DateOfBirth=@dateOfBirth, Phone=@phone,
       NormalizedPhone=@normalizedPhone, AlternatePhone=@alternatePhone, PreferredContactChannel=@preferredContactChannel,
-      Address=@address, EmergencyContactName=@emergencyContactName, EmergencyContactPhone=@emergencyContactPhone, UpdatedAt=SYSUTCDATETIME()
-    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status
+      Address=@address, EmergencyContactName=@emergencyContactName, EmergencyContactPhone=@emergencyContactPhone,
+      ProfileStatus=COALESCE(@profileStatus, ProfileStatus), UpdatedAt=SYSUTCDATETIME()
+    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource
     WHERE Id=@id
   `, (request) => request.input('id', sql.Int, id).input('fullName', sql.NVarChar(180), data.fullName)
     .input('normalizedName', sql.NVarChar(180), data.normalizedName).input('dateOfBirth', sql.Date, data.dateOfBirth || null)
     .input('phone', sql.NVarChar(40), data.phone).input('normalizedPhone', sql.NVarChar(40), data.normalizedPhone)
     .input('alternatePhone', sql.NVarChar(40), data.alternatePhone || null).input('preferredContactChannel', sql.NVarChar(20), data.preferredContactChannel || null)
     .input('address', sql.NVarChar(500), data.address || null).input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
-    .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null));
+    .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
+    .input('profileStatus', sql.NVarChar(20), data.profileStatus || null));
   return { patient: result.recordset[0], before: before.recordset[0] };
 };
 

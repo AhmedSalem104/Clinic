@@ -37,9 +37,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .metric-value { margin-top: 16px; color: var(--text); font-size: 27px; font-weight: 700; letter-spacing: -.02em; }
 .metric-label { color: var(--muted); font-size: 13px; }
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-.section-heading h1 { margin: 0; color: var(--text); font-size: 27px; font-weight: 700; letter-spacing: -.02em; }
+.section-heading h1 { margin: 0; color: var(--text); font-size: 27px; font-weight: 700; letter-spacing: -.02em; display: flex; align-items: center; gap: 9px; }
+.section-heading h1 svg { width: 24px; height: 24px; color: var(--primary); flex: 0 0 auto; }
 .section-heading p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .btn { min-height: 40px; border-radius: 8px; padding: 8px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s ease; }
+.btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 .btn-primary { color: #fff; background: var(--primary); }
 .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }

@@ -26,13 +26,14 @@
   <img src="https://img.shields.io/badge/Database-SQL%20Server%20%2B%20mssql-CC2927?style=flat-square&logo=microsoftsqlserver&logoColor=white" alt="Microsoft SQL Server">
 </p>
 
-> **الحالة الحالية:** التسجيل الذاتي للمريضة يعمل بالبريد الإلكتروني وكلمة المرور **بدون OTP**، والمريضة تستطيع الآن إنشاء حجز لنفسها من نفس شاشة الحجز المستخدمة بواسطة الـReception، مع تطبيق قواعد الـAvailability وDouble Booking من الـBackend.
+> **الحالة الحالية:** الواجهة عربية RTL، والمريضة تستطيع حجز أول موعد **بدون تسجيل دخول وبدون OTP** من فورم عام للمواعيد المتاحة. بعد الحجز تحصل على Patient ID ورقم الحجز ورقم الدور ورابط المتابعة، ويمكنها إنشاء حساب لاحقًا لربط الحجز ومتابعة دورها.
 
 ## روابط سريعة
 
 | الرابط | الاستخدام |
 |---|---|
 | [التجربة المباشرة](https://clinic-seven-sand.vercel.app) | النسخة المنشورة على Vercel |
+| [الحجز العام بدون دخول](https://clinic-seven-sand.vercel.app/patient-booking.html) | فورم الحجز الأول للمريضة |
 | [الإنتاج البديل](https://clinic-paaf.vercel.app) | رابط Vercel بديل |
 | [دليل التشغيل الكامل](docs/PROJECT_GUIDE.md) | الـflows، الصلاحيات، الـAPI، قاعدة البيانات، النشر وحل المشاكل |
 | [النماذج الطبية الواقعية](docs/medical-forms/) | مراجع وحقول Patient History وGynecology وAntenatal وUltrasound وغيرها |
@@ -43,7 +44,7 @@
 - [نظرة سريعة](#نظرة-سريعة)
 - [الهدف والكيانات الأساسية](#الهدف)
 - [المستخدمون والصلاحيات](#المستخدمون-والصلاحيات)
-- [تسجيل المريضة والحجز الذاتي](#patient-registration-بدون-otp)
+- [تسجيل المريضة والحجز العام والذاتي](#patient-registration-بدون-otp)
 - [الحجز والطابور والـRealtime](#queue-management)
 - [السجل الطبي والنماذج](#السجل-الطبي)
 - [المعمارية والـAPI](#المعمارية)
@@ -57,7 +58,8 @@
 
 | ما تم تسليمه | النتيجة العملية |
 |---|---|
-| Patient Registration بدون OTP | إنشاء حساب مريضة وربطه بسجل Patient داخل Transaction واحدة |
+| Patient Registration بدون OTP | إنشاء حساب مريضة أو ربط حساب لاحقًا بملف الحجز باستخدام Patient ID + الهاتف |
+| Public Guest Booking | حجز أول موعد بدون Login، مع Patient ID ورقم الحجز ورقم الدور ورابط متابعة |
 | Patient Self-booking | اختيار الطبيب والخدمة والتاريخ والـslot والسعر من نفس New Booking Flow |
 | Booking Security | إجبار `patientId` و`BookingSource=online` من جلسة المريضة، وعدم قبول حجز مريضة أخرى |
 | Queue & Tracking | Queue Entry وPublic Tracking Token وEstimated Waiting Time |
@@ -69,8 +71,10 @@
 
 ```mermaid
 flowchart LR
-  Patient[المريضة] -->|Register / Login| Portal[Patient Portal]
-  Portal -->|نفس شاشة الحجز| Booking[New Booking]
+  Patient[المريضة] -->|حجز بدون دخول| PublicBooking[Public Booking Form]
+  PublicBooking -->|اختيار موعد متاح| Booking[Booking Transaction]
+  Patient -->|اختياري لاحقًا| Portal[Patient Portal]
+  Portal -->|نفس شاشة الحجز| Booking
   Reception[Reception] --> Booking
   Owner[Clinic Owner] --> Booking
   Booking --> Availability[Availability + Pricing]
@@ -97,13 +101,14 @@ flowchart TB
 <details>
 <summary><strong>افتح رحلة الحجز الذاتي خطوة بخطوة</strong></summary>
 
-1. المريضة تسجل الدخول بالبريد وكلمة المرور.
-2. تضغط **Book a new appointment** من Patient Portal.
-3. تختار الطبيب، الخدمة، التاريخ والـslot الظاهر كمتاح.
-4. يظهر السعر الحالي حسب Doctor + Service.
-5. يؤكد الـBackend أن الـslot ما زال متاحًا داخل Transaction.
-6. يتم إنشاء Appointment وQueue Entry عند احتياج الخدمة للطابور.
-7. تعود المريضة إلى Portal لترى الموعد ورقم الدور ورابط المتابعة.
+1. تفتح المريضة رابط **الحجز بدون تسجيل دخول**.
+2. تكتب الاسم ورقم الهاتف فقط، ثم تختار الطبيب والخدمة والتاريخ والـslot الظاهر كمتاح.
+3. يظهر السعر الحالي حسب Doctor + Service.
+4. يؤكد الـBackend أن الـslot ما زال متاحًا داخل Transaction.
+5. يتم إنشاء Patient مختصر بحالة `incomplete` ثم Appointment وQueue Entry عند احتياج الخدمة للطابور.
+6. تظهر Patient ID ورقم الحجز ورقم الدور ورابط المتابعة.
+7. عند الحضور يكمل الـReception باقي البيانات ويحوّل حالة الملف إلى `complete`.
+8. يمكن للمريضة إنشاء حساب لاحقًا بإدخال Patient ID والهاتف، بدون OTP.
 
 ```mermaid
 sequenceDiagram
@@ -154,7 +159,7 @@ sequenceDiagram
 | Clinic Owner | كل المرضى والأطباء والخدمات والأسعار والجداول والحجوزات والطابور والسجل الطبي والتقارير والمستخدمون والإعدادات وAudit Logs | لا توجد قيود تشغيلية داخل نطاقه |
 | Doctor | المرضى والحالات المعيّنة له، Visits، Pregnancy، Medications، Allergies، Labs، Ultrasound، Documents، Progress والتقارير | مرضى غير Assigned له وإدارة المستخدمين |
 | Reception | البحث، Add Patient، Booking، Phone Booking، Walk-in، Check-in، Queue، No Show، Cancel، Reschedule، Pause/Resume | Diagnosis وClinical Notes وتفاصيل الحمل والأدوية والتقارير الطبية |
-| Patient | إنشاء حساب بدون OTP، Login، Patient ID، حجز موعد لنفسها من شاشة الحجز المشتركة، رؤية مواعيدها، حالة الموعد، متابعة الدور | السجل الطبي وDashboard العيادة ومرضى آخرون وإدارة الطابور والحجز باسم مريضة أخرى |
+| Patient | حجز أول موعد بدون Login، إنشاء حساب اختياري بدون OTP، رؤية مواعيدها، حالة الموعد، متابعة الدور والوقت المتوقع | السجل الطبي وDashboard العيادة ومرضى آخرون وإدارة الطابور والحجز باسم مريضة أخرى |
 
 ~~~mermaid
 flowchart LR
@@ -170,6 +175,32 @@ flowchart LR
 صلاحيات الـBackend هي طبقة الحماية الأساسية، وليس إخفاء الزر في الواجهة.
 
 ## Patient Registration بدون OTP
+
+### الحجز الأول بدون تسجيل دخول
+
+الرابط العام:
+
+~~~text
+/patient-booking.html
+/book
+~~~
+
+الـFlow:
+
+~~~mermaid
+flowchart TD
+  A[فتح فورم الحجز العام] --> B[الاسم ورقم الهاتف]
+  B --> C[اختيار الطبيب والخدمة]
+  C --> D[اختيار التاريخ والموعد المتاح]
+  D --> E[عرض السعر]
+  E --> F[تأكيد الحجز بدون Login أو OTP]
+  F --> G[Patient ID + Booking Number + Queue Number]
+  G --> H[رابط متابعة الدور]
+  G --> I[الريسبشن يكمل البيانات عند الوصول]
+  I --> J[اختياري: إنشاء حساب باستخدام Patient ID والهاتف]
+~~~
+
+الحجز العام لا يقبل `patientId` من المتصفح، ولا يستقبل Diagnosis أو Clinical Notes. الـBackend يبحث عن المريضة بالهاتف داخل Transaction، وينشئ سجلًا تشغيليًا مختصرًا إذا لم تكن موجودة، ثم يحجز الـslot ويمنع الـDouble Booking. الهاتف غير موثق لأن الـFlow بدون OTP؛ لذلك يظل استكمال الهوية والبيانات مسؤولية الريسبشن.
 
 ### الدخول
 
@@ -190,6 +221,7 @@ flowchart LR
 | الحقل | الحالة | الاستخدام |
 |---|---|---|
 | Full Name | Required | الاسم الظاهر في الحجوزات |
+| Patient ID من الحجز | Optional | يربط الحساب لاحقًا بسجل الحجز مع مطابقة الهاتف |
 | Date of Birth | Optional | كشف التكرار وحساب العمر |
 | Phone | Required | البحث والتواصل وكشف التكرار |
 | Email | Required | اسم الدخول الفريد |
@@ -236,7 +268,7 @@ sequenceDiagram
 - الهاتف بعد التطبيع موجود في Patients.NormalizedPhone.
 - الاسم المطبع مع تاريخ الميلاد يطابق سجلًا موجودًا.
 
-لا يتم الدمج التلقائي مع سجل قديم، لأن التسجيل بدون OTP لا يثبت ملكية الهاتف. يقوم موظف العيادة بالمراجعة والربط اليدوي عند الحاجة.
+لا يتم الربط التلقائي بمجرد الهاتف. لربط حجز عام بحساب لاحقًا يجب إدخال Patient ID من تأكيد الحجز مع نفس الهاتف؛ لا يوجد OTP، لذلك تظل المراجعة والاستكمال مسؤولية العيادة.
 
 بعد نجاح التسجيل:
 
@@ -246,19 +278,24 @@ sequenceDiagram
 4. تظهر المواعيد والبيانات التشغيلية فقط.
 5. يظهر رابط متابعة الدور عند توفره.
 
-الحجز الذاتي للمريضة متاح من نفس شاشة **New Booking** المستخدمة بواسطة الـReception، لكن بواجهة مبسطة تثبت المريضة الحالية تلقائيًا. الحجز يمر بنفس قواعد الطبيب والخدمة والـslot والسعر ومنع الـDouble Booking، ويسجل <code>BookingSource=online</code>.
+الحجز الذاتي للمريضة المسجلة متاح من نفس شاشة **New Booking** المستخدمة بواسطة الـReception، لكن بواجهة مبسطة تثبت المريضة الحالية تلقائيًا. الحجز يمر بنفس قواعد الطبيب والخدمة والـslot والسعر ومنع الـDouble Booking، ويسجل <code>BookingSource=online</code>.
+
+### استكمال بيانات الحجز في العيادة
+
+يظهر الحجز العام في **كل المواعيد** للريسبشن، وفي مواعيد الطبيب المعيّنة له. يظهر بجانبه Badge **بيانات ناقصة**. يفتح الريسبشن ملف المريضة، يضغط **استكمال البيانات**، يجمع البيانات التشغيلية المتبقية، ثم يحدد **مكتمل**. السجل الطبي لا يضاف من هذا النموذج؛ يظل داخل وحدات الطبيب الطبية.
 
 ## استخدام النظام حسب الدور
 
 ### Owner
 
 1. Login.
-2. أضف Doctors.
-3. أضف Services ومددها.
-4. أضف Pricing حسب Doctor + Service.
-5. أضف Schedules وExceptions.
-6. أنشئ Users للأطباء والـReception.
-7. راجع Settings وAudit Logs.
+2. راجع الحجوزات العامة وحالات الملفات الناقصة.
+3. أضف Doctors.
+4. أضف Services ومددها.
+5. أضف Pricing حسب Doctor + Service.
+6. أضف Schedules وExceptions.
+7. أنشئ Users للأطباء والـReception.
+8. راجع Settings وAudit Logs.
 
 ### Reception
 
@@ -280,7 +317,7 @@ flowchart TD
 
 ### إنشاء الحجز
 
-1. Search بالاسم أو الهاتف أو Patient ID.
+1. Search بالاسم أو الهاتف أو Patient ID، خصوصًا Patient ID الموجود في الحجز العام.
 2. اختيار المريضة أو إنشاء Quick Patient.
 3. اختيار الطبيب.
 4. اختيار الخدمة.
@@ -303,7 +340,7 @@ Phone Booking يستخدم نفس New Booking Flow ولا يوجد نظام من
 
 ### Doctor
 
-1. افتح Queue أو Visits.
+1. افتح الحجوزات المعيّنة لك أو Queue/Visits.
 2. اختر مريضة Assigned لك.
 3. راجع الملخص والتنبيهات والحالة الحالية.
 4. Start Visit.
@@ -314,26 +351,27 @@ Phone Booking يستخدم نفس New Booking Flow ولا يوجد نظام من
 
 ### Patient
 
-1. Login بالبريد وكلمة المرور.
-2. الانتقال التلقائي إلى Patient Portal.
-3. الضغط على **Book a new appointment**.
-4. اختيار الطبيب والخدمة والتاريخ والـslot المتاح.
-5. مراجعة السعر ثم تأكيد الحجز.
-6. مراجعة رقم الموعد ورابط متابعة الدور من الـPortal.
+1. للحجز الأول: افتحي **حجز موعد بدون تسجيل دخول**.
+2. اختاري الطبيب والخدمة والتاريخ والـslot المتاح.
+3. راجعي السعر ثم أكدي الحجز.
+4. احتفظي بـPatient ID ورقم الحجز ورابط الدور.
+5. عند الرغبة في المتابعة المستمرة، أنشئي حسابًا لاحقًا بنفس الهاتف وPatient ID.
+6. بعد تسجيل الدخول يظهر Patient Portal بالمواعيد والدور والوقت المتوقع.
 7. يمكن إلغاء الموعد حسب سياسة العيادة عندما تُفعّل صلاحية الإلغاء للمريضة.
 
 ### حجز المريضة لنفسها
 
 ```mermaid
 flowchart TD
-  A[Patient Login] --> B[Patient Portal]
-  B --> C[New Appointment]
+  A[Public Booking بدون دخول] --> B[بيانات مختصرة]
+  B --> C[اختيار الطبيب والخدمة]
   C --> D[Choose Doctor]
   D --> E[Choose Service]
   E --> F[Choose Date and Available Slot]
   F --> G[Show Current Price]
   G --> H[Confirm Booking]
-  H --> I[Appointment Number and Queue Tracking Link]
+  H --> I[رقم الحجز والدور ورابط المتابعة]
+  I --> J[حساب اختياري لاحقًا]
 ```
 
 يستخدم هذا الـFlow نفس <code>POST /api/appointments</code>، لكن الـBackend يستبدل أي <code>patientId</code> أو <code>bookingSource</code> مرسلين من المتصفح بالقيم الآمنة من جلسة المريضة. المريضة ترى مواعيدها فقط، ولا تستطيع فتح موعد مريضة أخرى أو استخدام صلاحيات إدارة الحجوزات.
@@ -438,6 +476,8 @@ sequenceDiagram
 | /users | Users & Roles | Owner |
 | /settings | Settings | Owner |
 | /patient-portal | Patient Portal | Patient فقط |
+| /patient-booking.html | الحجز العام بدون دخول | Public Patient |
+| /book | اختصار الحجز العام | Public Patient |
 
 ### الصفحات العامة
 
@@ -538,6 +578,7 @@ flowchart LR
 ~~~text
 public/
   index.html
+  patient-booking.html
   patient-register.html
   queue-tracking.html
   css/
@@ -554,6 +595,9 @@ public/
       visits.js
       pregnancy.js
       patient-portal.js
+    services/
+      public-booking-service.js
+    public-booking.js
     patient-register.js
 
 src/
@@ -579,6 +623,9 @@ src/
 | GET | /api/auth/me | Auth | المستخدم الحالي |
 | POST | /api/auth/logout | Optional | إنهاء الجلسة |
 | POST | /api/patient-portal/register | Public + Rate Limit | إنشاء حساب المريضة |
+| GET | /api/public/booking/options | Public + Rate Limit | الأطباء والخدمات النشطة للحجز |
+| GET | /api/public/booking/available-slots | Public + Rate Limit | المواعيد المتاحة بدون بيانات طبية |
+| POST | /api/public/booking | Public + Rate Limit | إنشاء Patient مختصر وحجز ذري |
 | GET | /api/patient-portal/summary | Patient | المواعيد والبيانات التشغيلية |
 | POST | /api/appointments | Owner / Reception / Patient لحسابها فقط | إنشاء حجز من شاشة New Booking المشتركة |
 | GET | /api/public/queue/:token | Public Token | متابعة الدور |
@@ -665,6 +712,13 @@ ProgressIndicators
 Notifications
 Settings
 AuditLogs
+~~~
+
+حقول تشغيل الحجز العام داخل `Patients`:
+
+~~~text
+RegistrationSource: reception | public_booking | patient_portal
+ProfileStatus: incomplete | complete
 ~~~
 
 ربط حساب المريضة:
@@ -921,7 +975,9 @@ Content-Type: application/json
 - Documents وProgress وReports.
 - Notifications وAudit Logs.
 - Patient Registration بدون OTP.
+- Public Guest Booking بدون Login أو OTP، مع ربط الحساب لاحقًا.
 - Patient Portal للمواعيد ومتابعة الدور والحجز الذاتي من نفس شاشة New Booking.
+- واجهة عربية RTL مع أيقونات موحدة للـSidebar وروابط الإجراءات وSweetAlert2 للتأكيدات.
 - Patient self-booking permission منفصلة عن `appointments:manage`، مع تثبيت هوية المريضة من الـJWT.
 - Vercel static/serverless deployment.
 - Local production Tailwind build.
@@ -929,7 +985,7 @@ Content-Type: application/json
 
 ## الحدود الحالية
 
-- Patient self-booking مفعل؛ أما إلغاء المريضة لموعدها ذاتيًا فيحتاج تفعيل Policy وصلاحية مستقلة قبل فتحه.
+- Public booking وPatient self-booking مفعّلان؛ أما إلغاء المريضة لموعدها ذاتيًا فيحتاج تفعيل Policy وصلاحية مستقلة قبل فتحه.
 - Email/Phone verification غير موجود لأن التسجيل بدون OTP.
 - SMS وWhatsApp Business API يحتاجان Provider فعلي.
 - Object Storage دائم مطلوب لملفات Vercel.

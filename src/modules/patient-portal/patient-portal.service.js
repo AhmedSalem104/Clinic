@@ -16,7 +16,8 @@ const registrationData = (body, passwordHash) => ({
   preferredContactChannel: body.preferredContactChannel || null,
   address: body.address || null,
   emergencyContactName: body.emergencyContactName || null,
-  emergencyContactPhone: body.emergencyContactPhone || null
+  emergencyContactPhone: body.emergencyContactPhone || null,
+  patientCode: String(body.patientCode || '').trim().toUpperCase() || null
 });
 
 const register = async (body, req) => {
@@ -24,7 +25,7 @@ const register = async (body, req) => {
   try {
     const result = await repository.register(registrationData(body, passwordHash));
     await recordAudit({ req, action: 'patient_self_register', entity: 'patient', entityId: result.patient.Id, newValue: { patientId: result.patient.Id, userId: result.user.Id } });
-    return { patientId: result.patient.Id, patientCode: result.patient.PatientCode, email: result.user.Email };
+    return { patientId: result.patient.Id, patientCode: result.patient.PatientCode, email: result.user.Email, linkedExistingPatient: result.linkedExistingPatient };
   } catch (error) {
     if (error.number === 2601 || error.number === 2627) throw new AppError('This email or patient account is already registered.', 409, 'REGISTRATION_EXISTS');
     throw error;

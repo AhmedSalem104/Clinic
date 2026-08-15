@@ -12,21 +12,21 @@ const addDays = (dateValue, days) => {
 
 export async function render(outlet) {
   return renderMedicalPage(outlet, {
-    title: 'Pregnancy records',
-    description: 'Each pregnancy is kept as a separate case with LMP, EDD, obstetric history and outcome.',
-    formTitle: 'Add pregnancy',
+    title: 'سجلات الحمل',
+    description: 'يُحفظ كل حمل كحالة مستقلة تشمل تاريخ آخر دورة والموعد المتوقع للولادة والتاريخ الولادي والنتيجة.',
+    formTitle: 'إضافة حمل',
     load: (id) => medicalService.pregnancies(id),
     form: () => [
-      input('LMP', 'lmp', 'date'),
-      input('EDD', 'edd', 'date'),
-      input('EDD method', 'eddMethod', 'select', { options: [['', 'Not specified'], ['lmp', 'LMP calculation'], ['early_ultrasound', 'Early ultrasound'], ['other_clinician_assessment', 'Clinician assessment']] }),
-      input('Pregnancy number', 'pregnancyNumber', 'number', { min: 1, max: 30 }),
-      input('Gravida', 'gravida', 'number', { min: 0, max: 30 }),
-      input('Para', 'para', 'number', { min: 0, max: 30 }),
-      input('Abortions / miscarriages', 'abortions', 'number', { min: 0, max: 30 }),
-      input('Living children', 'livingChildren', 'number', { min: 0, max: 30 }),
-      input('Fetal count', 'fetalCount', 'number', { min: 1, max: 10 }),
-      input('Risk factors — one per line', 'riskFactors', 'textarea', { span2: true, max: 1500 })
+      input('تاريخ آخر دورة (LMP)', 'lmp', 'date'),
+      input('الموعد المتوقع للولادة (EDD)', 'edd', 'date'),
+      input('طريقة حساب الموعد المتوقع', 'eddMethod', 'select', { options: [['', 'غير محدد'], ['lmp', 'الحساب من آخر دورة'], ['early_ultrasound', 'سونار مبكر'], ['other_clinician_assessment', 'تقييم الطبيب']] }),
+      input('رقم الحمل', 'pregnancyNumber', 'number', { min: 1, max: 30 }),
+      input('عدد مرات الحمل (Gravida)', 'gravida', 'number', { min: 0, max: 30 }),
+      input('عدد الولادات (Para)', 'para', 'number', { min: 0, max: 30 }),
+      input('الإجهاض أو فقد الحمل', 'abortions', 'number', { min: 0, max: 30 }),
+      input('عدد الأطفال الأحياء', 'livingChildren', 'number', { min: 0, max: 30 }),
+      input('عدد الأجنة', 'fetalCount', 'number', { min: 1, max: 10 }),
+      input('عوامل الخطورة — عامل واحد في كل سطر', 'riskFactors', 'textarea', { span2: true, max: 1500 })
     ],
     afterForm: (wrapper) => {
       const lmp = wrapper.querySelector('[name="lmp"]');
@@ -52,6 +52,6 @@ export async function render(outlet) {
       riskFactors: data.riskFactors ? data.riskFactors.split('\n').map((item) => item.trim()).filter(Boolean) : []
     }),
     submit: (data) => medicalService.createPregnancy(data),
-    table: (rows) => rows.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Pregnancy</th><th>LMP</th><th>EDD</th><th>EDD method</th><th>Doctor</th><th>Status</th></tr></thead><tbody>${rows.map((pregnancy) => `<tr><td>${escapeHtml(pregnancy.PregnancyNumber || '—')}</td><td>${formatDate(pregnancy.LMP)}</td><td>${formatDate(pregnancy.EDD)}</td><td>${escapeHtml(pregnancy.EDDMethod || '—')}</td><td>${escapeHtml(pregnancy.AssignedDoctor || '—')}</td><td>${statusBadge(pregnancy.Status)}</td></tr>`).join('')}</tbody></table></div>` : emptyState('No pregnancy records found.')
+    table: (rows) => rows.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>الحمل</th><th>آخر دورة</th><th>الموعد المتوقع</th><th>طريقة الحساب</th><th>الطبيب</th><th>الحالة</th></tr></thead><tbody>${rows.map((pregnancy) => `<tr><td>${escapeHtml(pregnancy.PregnancyNumber || '—')}</td><td>${formatDate(pregnancy.LMP)}</td><td>${formatDate(pregnancy.EDD)}</td><td>${escapeHtml(pregnancy.EDDMethod || '—')}</td><td>${escapeHtml(pregnancy.AssignedDoctor || '—')}</td><td>${statusBadge(pregnancy.Status)}</td></tr>`).join('')}</tbody></table></div>` : emptyState('لا توجد سجلات حمل.')
   });
 }

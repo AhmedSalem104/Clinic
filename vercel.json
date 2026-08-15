@@ -20,8 +20,12 @@
       "dest": "/public/index.html"
     },
     {
-      "src": "/(index\\.html|queue-tracking\\.html|patient-register\\.html)$",
+      "src": "/(index\\.html|queue-tracking\\.html|patient-register\\.html|patient-booking\\.html)$",
       "dest": "/public/$1"
+    },
+    {
+      "src": "/book$",
+      "dest": "/public/patient-booking.html"
     },
     {
       "src": "/(patient-portal|appointments/new)$",

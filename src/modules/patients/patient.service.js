@@ -16,7 +16,8 @@ const shape = (body) => ({
   preferredContactChannel: body.preferredContactChannel || null,
   address: body.address || null,
   emergencyContactName: body.emergencyContactName || null,
-  emergencyContactPhone: body.emergencyContactPhone || null
+  emergencyContactPhone: body.emergencyContactPhone || null,
+  profileStatus: body.profileStatus || null
 });
 
 const list = async (params) => repository.list({ ...params, search: normalizeText(params.search || '') });
@@ -25,7 +26,7 @@ const create = async (body, req) => {
   const data = shape(body);
   const duplicates = await repository.findPotentialDuplicates(data);
   if (duplicates.length && body.confirmDuplicate !== true) throw new AppError('يوجد سجل مريضة مشابه. راجع النتائج قبل الإنشاء.', 409, 'POTENTIAL_DUPLICATE', { matches: duplicates });
-  const patient = await repository.create({ ...data, patientCode: `P-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}` });
+  const patient = await repository.create({ ...data, registrationSource: 'reception', profileStatus: 'complete', patientCode: `P-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}` });
   await recordAudit({ req, action: 'create', entity: 'patient', entityId: patient.Id, newValue: patient });
   return patient;
 };

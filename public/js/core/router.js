@@ -1,8 +1,11 @@
+import { localizePage } from './i18n.js';
+
 const routes = [
   { match: /^\/patient-portal\/?$/, load: () => import('../pages/patient-portal.js') },
   { match: /^\/dashboard\/?$/, load: () => import('../pages/dashboard.js') },
   { match: /^\/patients\/?$/, load: () => import('../pages/patients.js') },
   { match: /^\/patients\/new\/?$/, load: () => import('../pages/patient-form.js') },
+  { match: /^\/patients\/edit\/?$/, load: () => import('../pages/patient-form.js') },
   { match: /^\/assignments\/?$/, load: () => import('../pages/assignments.js') },
   { match: /^\/patients\/(\d+)\/?$/, load: () => import('../pages/patient-profile.js') },
   { match: /^\/appointments\/?$/, load: () => import('../pages/appointments.js') },
@@ -39,6 +42,8 @@ export const normalizePath = (path) => {
 
 export const createRouter = ({ outlet, onRoute }) => {
   let current = null;
+  const localizationObserver = new MutationObserver(() => localizePage(outlet));
+  localizationObserver.observe(outlet, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
   const resolve = (path) => routes.find((route) => route.match.test(pathnameOf(path)));
   const render = async (path = normalizePath(`${window.location.pathname}${window.location.search}`)) => {
     const normalized = normalizePath(path);
@@ -52,6 +57,7 @@ export const createRouter = ({ outlet, onRoute }) => {
       current = { path: normalized, module };
       await module.render(outlet, { params: match?.slice(1) || [], path: normalized });
       if (module.mount) await module.mount(outlet, { params: match?.slice(1) || [], path: normalized });
+      localizePage(outlet);
       outlet.focus({ preventScroll: true });
       onRoute?.(normalized);
     } catch (error) {

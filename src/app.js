@@ -36,6 +36,7 @@ app.use('/api', checkOrigin);
 
 app.get('/api/health', (_req, res) => res.json({ success: true, data: { status: 'ok', service: 'clinic' } }));
 app.use('/api', apiRouter);
+app.get(['/book', '/patient-booking'], (_req, res) => res.sendFile('patient-booking.html', { root: path.join(process.cwd(), 'public') }));
 app.use(express.static(path.join(process.cwd(), 'public'), { maxAge: env.nodeEnv === 'production' ? '1h' : 0 }));
 app.use(notFound);
 app.use(errorHandler);

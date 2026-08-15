@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="حجز موعد في عيادة النساء والتوليد بدون تسجيل دخول" />
+    <title>حجز موعد | عيادتي</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/tailwind.css" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main class="mx-auto min-h-screen max-w-5xl px-4 py-6 sm:px-6 lg:py-12">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-3 text-sm font-bold text-slate-900"><span class="brand-mark">+</span> عيادتي</a>
+        <div class="flex items-center gap-3 text-xs font-semibold">
+          <a href="/" class="page-link">تسجيل الدخول</a>
+          <a href="/patient-register.html" class="page-link">إنشاء حساب لاحقًا</a>
+        </div>
+      </div>
+
+      <section id="booking-shell" class="grid gap-6 lg:grid-cols-[1fr_330px]">
+        <div class="card overflow-hidden">
+          <div class="border-b border-slate-100 bg-blue-50 px-5 py-7 sm:px-8">
+            <div class="mb-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700"><span aria-hidden="true">●</span> حجز عام بدون تسجيل دخول</div>
+            <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl">احجزي موعدك بسهولة</h1>
+            <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">اختاري الطبيب والخدمة والموعد المتاح. سيظهر لك رقم الحجز ورقم الدور ورابط متابعة الوقت المتوقع.</p>
+          </div>
+          <form id="public-booking-form" class="p-5 sm:p-8">
+            <div id="booking-status" class="mb-5 hidden rounded-lg p-3 text-sm" role="status"></div>
+            <div class="form-grid">
+              <div>
+                <label class="form-label" for="fullName">الاسم الكامل <span class="text-red-500">*</span></label>
+                <input class="input" id="fullName" name="fullName" autocomplete="name" maxlength="180" required />
+              </div>
+              <div>
+                <label class="form-label" for="phone">رقم الهاتف <span class="text-red-500">*</span></label>
+                <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" required />
+                <div class="form-hint">سيستخدمه فريق الاستقبال للعثور على الحجز عند الوصول.</div>
+              </div>
+              <div>
+                <label class="form-label" for="doctorId">الطبيب <span class="text-red-500">*</span></label>
+                <select class="select" id="doctorId" name="doctorId" required><option value="">جاري تحميل الأطباء…</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="serviceId">الخدمة <span class="text-red-500">*</span></label>
+                <select class="select" id="serviceId" name="serviceId" required><option value="">اختاري الخدمة</option></select>
+              </div>
+              <div>
+                <label class="form-label" for="date">التاريخ <span class="text-red-500">*</span></label>
+                <input class="input" id="date" name="date" type="date" required />
+              </div>
+              <div>
+                <label class="form-label" for="dateOfBirth">تاريخ الميلاد</label>
+                <input class="input" id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday" />
+              </div>
+              <div class="span-2">
+                <label class="form-label">المواعيد المتاحة <span class="text-red-500">*</span></label>
+                <div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5"><div class="col-span-full rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">اختاري الطبيب والخدمة والتاريخ.</div></div>
+                <input type="hidden" id="startAt" name="startAt" required />
+              </div>
+              <div class="span-2">
+                <div id="price-box"></div>
+              </div>
+            </div>
+            <label class="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+              <input class="mt-1" type="checkbox" name="consent" required />
+              <span>أوافق على استخدام بيانات التواصل لإدارة هذا الموعد. لا يتم تسجيل بيانات طبية في الحجز العام، ويستكمل الريسبشن البيانات عند الزيارة.</span>
+            </label>
+            <button id="submit-booking" class="btn btn-primary mt-6 w-full sm:w-auto" type="submit">تأكيد الحجز</button>
+          </form>
+        </div>
+        <aside class="space-y-4">
+          <section class="card p-5">
+            <h2 class="font-semibold text-slate-900">كيف يتم الحجز؟</h2>
+            <ol class="mt-4 space-y-4 text-sm leading-6 text-slate-600">
+              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">1</span><span>اكتبي الاسم ورقم الهاتف.</span></li>
+              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">2</span><span>اختاري الطبيب والخدمة والموعد المتاح.</span></li>
+              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">3</span><span>احتفظي برقم الحجز ورقم الدور ورابط المتابعة.</span></li>
+              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">4</span><span>عند الوصول، يكمل الريسبشن باقي بيانات الملف.</span></li>
+            </ol>
+          </section>
+          <section class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
+            <strong>مهم</strong>
+            <p class="mt-1">لا نطلب تسجيل دخول أو رمز تحقق للحجز الأول. يمكنك إنشاء حساب لاحقًا باستخدام معرّف المريضة لمتابعة مواعيدك ودورك.</p>
+          </section>
+        </aside>
+      </section>
+      <section id="booking-confirmation" class="hidden"></section>
+    </main>
+    <script type="module" src="/js/public-booking.js"></script>
+  </body>
+</html>

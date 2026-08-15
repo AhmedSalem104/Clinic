@@ -157,7 +157,7 @@ const availableSlots = async ({ doctorId, serviceId, date }) => {
   };
 };
 
-const create = async ({ patientId, doctorId, serviceId, bookingSource, startAt, notes, createdBy }) => withTransaction(async (transaction) => {
+const createInTransaction = async (transaction, { patientId, doctorId, serviceId, bookingSource, startAt, notes, createdBy }) => {
   const context = await loadScheduleContext(transaction.request(), doctorId, serviceId, startAt);
   validateBookableTime({ context, startAt });
 
@@ -215,7 +215,9 @@ const create = async ({ patientId, doctorId, serviceId, bookingSource, startAt, 
       .query(`INSERT INTO QueueEntries (AppointmentId,PatientId,DoctorId,ServiceId,QueueNumber,Position,QueueDate,Status,ExpectedDurationMinutes) VALUES (@appointmentId,@patientId,@doctorId,@serviceId,@queueNumber,@position,@queueDate,N'booked',@duration)`);
   }
   return appointment;
-});
+};
+
+const create = async (payload) => withTransaction(async (transaction) => createInTransaction(transaction, payload));
 
 const getById = async (id) => {
   const result = await query(`SELECT a.*,p.FullName PatientName,p.PatientCode,p.Phone,d.FullName DoctorName,s.Name ServiceName,s.BaseDurationMinutes,s.RequiresQueue FROM Appointments a JOIN Patients p ON p.Id=a.PatientId JOIN Doctors d ON d.Id=a.DoctorId JOIN Services s ON s.Id=a.ServiceId WHERE a.Id=@id`, (request) => request.input('id', sql.Int, id));
@@ -252,4 +254,4 @@ const updateStatus = async (id, status, reason) => withTransaction(async (transa
   return appointment;
 });
 
-module.exports = { list, availableSlots, create, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES };
+module.exports = { list, availableSlots, create, createInTransaction, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES };

@@ -14,6 +14,7 @@ const registrationSchema = z.object({
   address: z.string().max(500).optional().nullable(),
   emergencyContactName: z.string().max(160).optional().nullable(),
   emergencyContactPhone: z.string().max(40).optional().nullable(),
+  patientCode: z.string().trim().max(30).optional().nullable().or(z.literal('')),
   consent: z.literal(true)
 }).superRefine((value, context) => {
   if (value.password !== value.confirmPassword) {

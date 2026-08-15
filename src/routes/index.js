@@ -25,6 +25,7 @@ const { router: audit } = require('../modules/audit/audit.routes');
 const { router: history } = require('../modules/history/history.routes');
 const { router: publicRoutes } = require('../modules/public/public.routes');
 const { router: patientPortal } = require('../modules/patient-portal/patient-portal.routes');
+const { router: publicBooking } = require('../modules/public-booking/public-booking.routes');
 
 const apiRouter = express.Router();
 apiRouter.use('/auth', auth);
@@ -52,6 +53,7 @@ apiRouter.use('/settings', settings);
 apiRouter.use('/audit', audit);
 apiRouter.use('/medical-history', history);
 apiRouter.use('/public', publicRoutes);
+apiRouter.use('/public/booking', publicBooking);
 apiRouter.use('/patient-portal', patientPortal);
 
 module.exports = { apiRouter };

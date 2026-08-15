@@ -1,6 +1,8 @@
 const form = document.querySelector('#patient-registration-form');
 const statusBox = document.querySelector('#registration-status');
 const submitButton = form?.querySelector('button[type="submit"]');
+const patientCode = new URLSearchParams(window.location.search).get('patientCode');
+if (patientCode && form?.elements.patientCode) form.elements.patientCode.value = patientCode;
 
 const showStatus = (message, kind = 'info') => {
   statusBox.textContent = message;
@@ -24,7 +26,7 @@ form?.addEventListener('submit', async (event) => {
     });
     const payload = await response.json();
     if (!response.ok || payload.success === false) throw new Error(payload.error?.message || 'تعذر إنشاء الحساب.');
-    showStatus(`تم إنشاء الحساب بنجاح. Patient ID: ${payload.data.patientCode}. يمكنك تسجيل الدخول الآن.`, 'success');
+    showStatus(`تم إنشاء الحساب بنجاح. معرّف المريضة: ${payload.data.patientCode}. يمكنك تسجيل الدخول الآن.`, 'success');
     form.reset();
     setTimeout(() => { window.location.href = '/'; }, 1800);
   } catch (error) {
