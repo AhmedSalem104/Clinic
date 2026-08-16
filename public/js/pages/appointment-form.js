@@ -9,7 +9,8 @@ const localToIso = (value) => new Date(value).toISOString();
 export async function render(outlet) {
   const query = new URLSearchParams(window.location.search);
   const currentUser = auth.user();
-  const isPatientBooking = currentUser?.role === 'patient';
+  const currentRole = String(currentUser?.role || '').trim().toLowerCase();
+  const isPatientBooking = currentRole === 'patient';
   const queryPatient = isPatientBooking ? String(currentUser.patientId || '') : (query.get('patientId') || '');
   const rescheduleId = isPatientBooking ? '' : (query.get('rescheduleId') || '');
   const requestedSource = isPatientBooking ? 'online' : (query.get('source') === 'walk_in' ? 'walk_in' : 'reception');
@@ -19,7 +20,7 @@ export async function render(outlet) {
   ]);
   const today = localDateKey();
 
-  outlet.innerHTML = `<div class="section-heading"><div><h1>حجز جديد</h1><p>اختاري المريضة والطبيب والخدمة والتاريخ والموعد المتاح.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">العودة إلى الحجوزات</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><label class="form-label">المريضة <span class="text-red-500">*</span></label><input id="patient-search-booking" class="input" placeholder="ابحثي بالاسم أو الهاتف أو معرّف المريضة" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div></div><div><label class="form-label">الطبيب <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">اختاري الطبيب</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">الخدمة <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">اختاري الخدمة</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}</select></div><div><label class="form-label">التاريخ <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">مصدر الحجز</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>الريسبشن</option><option value="phone">هاتف</option><option value="online">إلكتروني</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>بدون موعد</option></select></div><div class="span-2"><label class="form-label">المواعيد المتاحة</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('اختاري الطبيب والخدمة والتاريخ.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">ملاحظات تشغيلية</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="لا تكتبي تشخيصًا أو ملاحظات طبية حساسة هنا."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">تأكيد الحجز</button></div></form>`;
+  outlet.innerHTML = `<div class="section-heading"><div><h1>حجز جديد</h1><p>اختاري المريضة والطبيب والخدمة والتاريخ والموعد المتاح.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">العودة إلى الحجوزات</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><label class="form-label">المريضة <span class="text-red-500">*</span></label><input id="patient-search-booking" class="input" placeholder="ابحثي بالاسم أو الهاتف أو معرّف المريضة" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div><p class="mt-2 text-xs text-slate-500">ابدئي بالبحث ثم اضغطي على المريضة من النتائج لتثبيت ملفها في الحجز.</p></div><div><label class="form-label">الطبيب <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">اختاري الطبيب</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">الخدمة <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">اختاري الخدمة</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}</select></div><div><label class="form-label">التاريخ <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">مصدر الحجز</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>الريسبشن</option><option value="phone">هاتف</option><option value="online">إلكتروني</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>بدون موعد</option></select></div><div class="span-2"><label class="form-label">المواعيد المتاحة</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('اختاري الطبيب والخدمة والتاريخ.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">ملاحظات تشغيلية</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="لا تكتبي تشخيصًا أو ملاحظات طبية حساسة هنا."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">تأكيد الحجز</button></div></form>`;
 
   const form = document.querySelector('#appointment-form');
   const patientInput = document.querySelector('#patient-search-booking');
@@ -73,6 +74,8 @@ export async function render(outlet) {
 
   if (!isPatientBooking) patientInput.addEventListener('input', debounce(async () => {
     const search = patientInput.value.trim();
+    patientIdField.value = '';
+    document.querySelector('#selected-patient').innerHTML = '';
     if (search.length < 2) { results.innerHTML = ''; return; }
     try {
       const response = await patientService.list({ search, page: 1, pageSize: 8 });
@@ -120,8 +123,11 @@ export async function render(outlet) {
     const patientId = isPatientBooking ? Number(currentUser?.patientId) : Number(patientIdField?.value);
     const selectedStartAt = startAtField?.value || '';
     if (!patientId || !selectedStartAt) {
-      const missingMessage = !patientId ? 'حساب المريضة غير مرتبط بشكل صحيح.' : 'اختاري موعدًا متاحًا قبل تأكيد الحجز.';
+      const missingMessage = !patientId
+        ? (isPatientBooking ? 'حساب المريضة غير مرتبط بشكل صحيح. سجّلي الدخول بحساب مريضة مرتبط أو استخدمي الحجز العام.' : 'ابحثي عن المريضة ثم اختاريها من نتائج البحث قبل تأكيد الحجز.')
+        : 'اختاري موعدًا متاحًا قبل تأكيد الحجز.';
       window.Swal.fire({ icon: 'warning', title: 'بيانات الحجز ناقصة', text: missingMessage });
+      if (!patientId && !isPatientBooking) patientInput?.focus();
       return;
     }
     const button = form.querySelector('button[type=submit]');

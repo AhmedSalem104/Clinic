@@ -23,3 +23,16 @@ test('unlinked patient accounts cannot create appointments', () => {
 
   assert.equal(nextError?.code, 'FORBIDDEN');
 });
+
+test('reception booking keeps the patient selected in the booking form', () => {
+  const req = {
+    user: { role: 'reception', id: 7 },
+    body: { patientId: 11, doctorId: 2, serviceId: 1, bookingSource: 'reception' }
+  };
+  let nextError;
+  requireAppointmentCreate(req, {}, (error) => { nextError = error; });
+
+  assert.equal(nextError, undefined);
+  assert.equal(req.body.patientId, 11);
+  assert.equal(req.body.bookingSource, 'reception');
+});
