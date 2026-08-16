@@ -51,6 +51,10 @@ const env = Object.freeze({
   },
   uploadDir,
   maxUploadBytes: toNumber(process.env.MAX_UPLOAD_BYTES, 10 * 1024 * 1024),
+  location: {
+    reverseGeocoderUrl: process.env.REVERSE_GEOCODER_URL || 'https://nominatim.openstreetmap.org/reverse',
+    reverseGeocoderUserAgent: process.env.REVERSE_GEOCODER_USER_AGENT || 'ClinicManagementSystem/1.0'
+  },
   logLevel: process.env.LOG_LEVEL || 'info'
 });
 

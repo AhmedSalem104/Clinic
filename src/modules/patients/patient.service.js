@@ -15,6 +15,10 @@ const shape = (body) => ({
   alternatePhone: body.alternatePhone || null,
   preferredContactChannel: body.preferredContactChannel || null,
   address: body.address || null,
+  locationLatitude: body.locationLatitude ?? null,
+  locationLongitude: body.locationLongitude ?? null,
+  locationAccuracyMeters: body.locationAccuracyMeters ?? null,
+  locationCapturedAt: body.locationCapturedAt || null,
   emergencyContactName: body.emergencyContactName || null,
   emergencyContactPhone: body.emergencyContactPhone || null,
   profileStatus: body.profileStatus || null

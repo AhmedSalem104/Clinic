@@ -57,18 +57,56 @@ const createGuestPatientInTransaction = async (transaction, data) => {
     .input('phone', sql.NVarChar(40), data.phone)
     .input('normalizedPhone', sql.NVarChar(40), data.normalizedPhone)
     .input('preferredContactChannel', sql.NVarChar(20), data.preferredContactChannel || null)
+    .input('address', sql.NVarChar(500), data.address || null)
+    .input('addressSource', sql.NVarChar(30), data.addressSource || null)
+    .input('locationLatitude', sql.Decimal(9, 6), data.latitude ?? null)
+    .input('locationLongitude', sql.Decimal(9, 6), data.longitude ?? null)
+    .input('locationAccuracyMeters', sql.Decimal(10, 2), data.accuracy ?? null)
+    .input('locationCapturedAt', sql.DateTime2, data.capturedAt || null)
+    .input('locationDetailsJson', sql.NVarChar(sql.MAX), data.detailsJson || null)
     .query(`
       INSERT INTO Patients (
         PatientCode,FullName,NormalizedName,DateOfBirth,Phone,NormalizedPhone,
-        PreferredContactChannel,RegistrationSource,ProfileStatus
+        PreferredContactChannel,Address,AddressSource,LocationLatitude,LocationLongitude,
+        LocationAccuracyMeters,LocationCapturedAt,LocationDetailsJson,RegistrationSource,ProfileStatus
       )
-      OUTPUT INSERTED.Id,INSERTED.PatientCode,INSERTED.FullName,INSERTED.Phone
+      OUTPUT INSERTED.Id,INSERTED.PatientCode,INSERTED.FullName,INSERTED.Phone,INSERTED.Address,INSERTED.AddressSource,
+        INSERTED.LocationLatitude,INSERTED.LocationLongitude,INSERTED.LocationAccuracyMeters,INSERTED.LocationCapturedAt
       VALUES (
         @patientCode,@fullName,@normalizedName,@dateOfBirth,@phone,@normalizedPhone,
-        @preferredContactChannel,N'public_booking',N'incomplete'
+        @preferredContactChannel,@address,@addressSource,@locationLatitude,@locationLongitude,
+        @locationAccuracyMeters,@locationCapturedAt,@locationDetailsJson,N'public_booking',N'incomplete'
       );
     `);
   return result.recordset[0];
+};
+
+const updatePatientLocationInTransaction = async (transaction, patientId, data) => {
+  if (!data) return null;
+  const result = await transaction.request()
+    .input('id', sql.Int, patientId)
+    .input('address', sql.NVarChar(500), data.address || null)
+    .input('addressSource', sql.NVarChar(30), data.addressSource || null)
+    .input('locationLatitude', sql.Decimal(9, 6), data.latitude ?? null)
+    .input('locationLongitude', sql.Decimal(9, 6), data.longitude ?? null)
+    .input('locationAccuracyMeters', sql.Decimal(10, 2), data.accuracy ?? null)
+    .input('locationCapturedAt', sql.DateTime2, data.capturedAt || null)
+    .input('locationDetailsJson', sql.NVarChar(sql.MAX), data.detailsJson || null)
+    .query(`
+      UPDATE Patients SET
+        Address=COALESCE(NULLIF(@address,N''),Address),
+        AddressSource=COALESCE(@addressSource,AddressSource),
+        LocationLatitude=COALESCE(@locationLatitude,LocationLatitude),
+        LocationLongitude=COALESCE(@locationLongitude,LocationLongitude),
+        LocationAccuracyMeters=COALESCE(@locationAccuracyMeters,LocationAccuracyMeters),
+        LocationCapturedAt=COALESCE(@locationCapturedAt,LocationCapturedAt),
+        LocationDetailsJson=COALESCE(@locationDetailsJson,LocationDetailsJson),
+        UpdatedAt=SYSUTCDATETIME()
+      OUTPUT INSERTED.Id,INSERTED.Address,INSERTED.AddressSource,INSERTED.LocationLatitude,INSERTED.LocationLongitude,
+        INSERTED.LocationAccuracyMeters,INSERTED.LocationCapturedAt
+      WHERE Id=@id;
+    `);
+  return result.recordset[0] || null;
 };
 
 const confirmationInTransaction = async (transaction, appointmentId) => {
@@ -94,4 +132,11 @@ const confirmationInTransaction = async (transaction, appointmentId) => {
 
 const patientCode = () => `P-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
-module.exports = { listOptions, findPatientByPhoneInTransaction, createGuestPatientInTransaction, confirmationInTransaction, patientCode };
+module.exports = {
+  listOptions,
+  findPatientByPhoneInTransaction,
+  createGuestPatientInTransaction,
+  updatePatientLocationInTransaction,
+  confirmationInTransaction,
+  patientCode
+};

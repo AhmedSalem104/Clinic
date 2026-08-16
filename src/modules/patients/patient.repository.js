@@ -2,8 +2,16 @@ const { query, withTransaction } = require('../../db/repository');
 const { sql } = require('../../db/connection');
 const { AppError } = require('../../utils/errors');
 
-const doctorScope = (user, alias = 'p') => user?.role === 'doctor' ? `AND EXISTS (
-  SELECT 1 FROM PatientAssignments pa_scope WHERE pa_scope.PatientId = ${alias}.Id AND pa_scope.DoctorId = @scopeDoctorId AND pa_scope.EndedAt IS NULL
+const doctorScope = (user, alias = 'p') => user?.role === 'doctor' ? `AND (
+  EXISTS (
+    SELECT 1 FROM PatientAssignments pa_scope
+    WHERE pa_scope.PatientId = ${alias}.Id AND pa_scope.DoctorId = @scopeDoctorId AND pa_scope.EndedAt IS NULL
+  )
+  OR EXISTS (
+    SELECT 1 FROM Appointments appointment_scope
+    WHERE appointment_scope.PatientId = ${alias}.Id AND appointment_scope.DoctorId = @scopeDoctorId
+      AND appointment_scope.Status NOT IN (N'cancelled', N'no_show')
+  )
 )` : '';
 
 const list = async ({ user, search, pageSize, offset, sortColumn, sortDirection }) => {
@@ -51,9 +59,9 @@ const findPotentialDuplicates = async ({ phone, normalizedName, dateOfBirth }) =
 
 const create = async (data) => {
   const result = await query(`
-    INSERT INTO Patients (PatientCode, FullName, NormalizedName, DateOfBirth, Phone, NormalizedPhone, AlternatePhone, PreferredContactChannel, Address, EmergencyContactName, EmergencyContactPhone, RegistrationSource, ProfileStatus)
-    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource, INSERTED.CreatedAt
-    VALUES (@patientCode, @fullName, @normalizedName, @dateOfBirth, @phone, @normalizedPhone, @alternatePhone, @preferredContactChannel, @address, @emergencyContactName, @emergencyContactPhone, @registrationSource, @profileStatus)
+    INSERT INTO Patients (PatientCode, FullName, NormalizedName, DateOfBirth, Phone, NormalizedPhone, AlternatePhone, PreferredContactChannel, Address, AddressSource, LocationLatitude, LocationLongitude, LocationAccuracyMeters, LocationCapturedAt, EmergencyContactName, EmergencyContactPhone, RegistrationSource, ProfileStatus)
+    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Address, INSERTED.AddressSource, INSERTED.LocationLatitude, INSERTED.LocationLongitude, INSERTED.LocationAccuracyMeters, INSERTED.LocationCapturedAt, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource, INSERTED.CreatedAt
+    VALUES (@patientCode, @fullName, @normalizedName, @dateOfBirth, @phone, @normalizedPhone, @alternatePhone, @preferredContactChannel, @address, @addressSource, @locationLatitude, @locationLongitude, @locationAccuracyMeters, @locationCapturedAt, @emergencyContactName, @emergencyContactPhone, @registrationSource, @profileStatus)
   `, (request) => request.input('patientCode', sql.NVarChar(30), data.patientCode)
     .input('fullName', sql.NVarChar(180), data.fullName)
     .input('normalizedName', sql.NVarChar(180), data.normalizedName)
@@ -63,6 +71,11 @@ const create = async (data) => {
     .input('alternatePhone', sql.NVarChar(40), data.alternatePhone || null)
     .input('preferredContactChannel', sql.NVarChar(20), data.preferredContactChannel || null)
     .input('address', sql.NVarChar(500), data.address || null)
+    .input('addressSource', sql.NVarChar(30), data.addressSource || (data.address ? 'manual' : null))
+    .input('locationLatitude', sql.Decimal(9, 6), data.locationLatitude ?? null)
+    .input('locationLongitude', sql.Decimal(9, 6), data.locationLongitude ?? null)
+    .input('locationAccuracyMeters', sql.Decimal(10, 2), data.locationAccuracyMeters ?? null)
+    .input('locationCapturedAt', sql.DateTime2, data.locationCapturedAt || null)
     .input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
     .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
     .input('registrationSource', sql.NVarChar(30), data.registrationSource || 'reception')
@@ -74,7 +87,8 @@ const getById = async (id, user) => {
   const scope = doctorScope(user);
   const result = await query(`
     SELECT p.Id, p.PatientCode, p.FullName, p.DateOfBirth, p.Phone, p.AlternatePhone, p.PreferredContactChannel,
-      p.Address, p.EmergencyContactName, p.EmergencyContactPhone, p.HighRiskFlag, p.Status, p.ProfileStatus, p.RegistrationSource, p.CreatedAt,
+      p.Address, p.AddressSource, p.LocationLatitude, p.LocationLongitude, p.LocationAccuracyMeters, p.LocationCapturedAt, p.LocationDetailsJson,
+      p.EmergencyContactName, p.EmergencyContactPhone, p.HighRiskFlag, p.Status, p.ProfileStatus, p.RegistrationSource, p.CreatedAt,
       primaryDoctor.Id AS AssignedDoctorId, primaryDoctor.FullName AS AssignedDoctor,
       activeCase.Id AS CurrentCaseId, activeCase.Type AS CurrentCase, activeCase.Status AS CurrentCaseStatus,
       latestVisit.Id AS LatestVisitId, latestVisit.CreatedAt AS LatestVisitDate, latestVisit.Diagnosis AS LatestDiagnosis,
@@ -103,15 +117,21 @@ const update = async (id, data) => {
   const result = await query(`
     UPDATE Patients SET FullName=@fullName, NormalizedName=@normalizedName, DateOfBirth=@dateOfBirth, Phone=@phone,
       NormalizedPhone=@normalizedPhone, AlternatePhone=@alternatePhone, PreferredContactChannel=@preferredContactChannel,
-      Address=@address, EmergencyContactName=@emergencyContactName, EmergencyContactPhone=@emergencyContactPhone,
+      Address=@address, AddressSource=COALESCE(@addressSource, AddressSource),
+      LocationLatitude=COALESCE(@locationLatitude, LocationLatitude), LocationLongitude=COALESCE(@locationLongitude, LocationLongitude),
+      LocationAccuracyMeters=COALESCE(@locationAccuracyMeters, LocationAccuracyMeters), LocationCapturedAt=COALESCE(@locationCapturedAt, LocationCapturedAt),
+      EmergencyContactName=@emergencyContactName, EmergencyContactPhone=@emergencyContactPhone,
       ProfileStatus=COALESCE(@profileStatus, ProfileStatus), UpdatedAt=SYSUTCDATETIME()
-    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource
+    OUTPUT INSERTED.Id, INSERTED.PatientCode, INSERTED.FullName, INSERTED.DateOfBirth, INSERTED.Phone, INSERTED.Address, INSERTED.AddressSource, INSERTED.LocationLatitude, INSERTED.LocationLongitude, INSERTED.LocationAccuracyMeters, INSERTED.LocationCapturedAt, INSERTED.Status, INSERTED.ProfileStatus, INSERTED.RegistrationSource
     WHERE Id=@id
   `, (request) => request.input('id', sql.Int, id).input('fullName', sql.NVarChar(180), data.fullName)
     .input('normalizedName', sql.NVarChar(180), data.normalizedName).input('dateOfBirth', sql.Date, data.dateOfBirth || null)
     .input('phone', sql.NVarChar(40), data.phone).input('normalizedPhone', sql.NVarChar(40), data.normalizedPhone)
     .input('alternatePhone', sql.NVarChar(40), data.alternatePhone || null).input('preferredContactChannel', sql.NVarChar(20), data.preferredContactChannel || null)
-    .input('address', sql.NVarChar(500), data.address || null).input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
+    .input('address', sql.NVarChar(500), data.address || null).input('addressSource', sql.NVarChar(30), data.addressSource || (data.address ? 'manual' : null))
+    .input('locationLatitude', sql.Decimal(9, 6), data.locationLatitude ?? null).input('locationLongitude', sql.Decimal(9, 6), data.locationLongitude ?? null)
+    .input('locationAccuracyMeters', sql.Decimal(10, 2), data.locationAccuracyMeters ?? null).input('locationCapturedAt', sql.DateTime2, data.locationCapturedAt || null)
+    .input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
     .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
     .input('profileStatus', sql.NVarChar(20), data.profileStatus || null));
   return { patient: result.recordset[0], before: before.recordset[0] };

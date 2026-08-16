@@ -15,7 +15,7 @@ const navSections = [
   { title: 'حساب المريضة', items: [{ route:'/patient-portal', label:'مواعيدي ومتابعة الدور', icon:'calendar', roles:['patient'] }] },
   { title: 'نظرة عامة', items: [{ route:'/dashboard', label:'لوحة التحكم', icon:'grid' }] },
   { title: 'المرضى', items: [{ route:'/patients', label:'كل المرضى', icon:'users', permission:'patients:view_all' }, { route:'/patients/new', label:'إضافة مريضة', icon:'plus', permission:'patients:manage' }, { route:'/assignments', label:'التخصيصات', icon:'users', permission:'patients:manage' }] },
-  { title: 'الحجوزات', items: [{ route:'/appointments', label:'التقويم والحجوزات', icon:'calendar', permission:'appointments:view_assigned' }, { route:'/appointments/new', label:'حجز جديد', icon:'plus', permission:'appointments:manage' }, { route:'/queue', label:'الطابور', icon:'clock', permission:'queue:manage' }] },
+  { title: 'الحجوزات', items: [{ route:'/appointments', label:'التقويم والحجوزات', icon:'calendar', permission:'appointments:view_all' }, { route:'/appointments/new', label:'حجز جديد', icon:'plus', permission:'appointments:manage' }, { route:'/queue', label:'الطابور', icon:'clock', permission:'queue:manage' }] },
   { title: 'السجل الطبي', medical:true, items: [{ route:'/visits', label:'الزيارات', icon:'clipboard' }, { route:'/cases', label:'الحالات', icon:'medical' }, { route:'/pregnancy', label:'الحمل', icon:'medical' }, { route:'/history', label:'التاريخ النسائي والولادي', icon:'medical' }, { route:'/medications', label:'الأدوية', icon:'medical' }, { route:'/allergies', label:'الحساسيات', icon:'shield' }, { route:'/labs', label:'التحاليل', icon:'clipboard' }, { route:'/ultrasound', label:'السونار', icon:'medical' }, { route:'/documents', label:'المستندات', icon:'file' }, { route:'/progress', label:'التطور', icon:'report' }] },
   { title: 'إدارة العيادة', items: [{ route:'/doctors', label:'الأطباء', icon:'doctor', ownerOnly:true }, { route:'/schedules', label:'الجداول', icon:'calendar', roles:['owner','doctor'] }, { route:'/services', label:'الخدمات', icon:'tag', roles:['owner','doctor','reception'] }, { route:'/pricing', label:'الأسعار', icon:'tag', roles:['owner','doctor','reception'] }] },
   { title: 'الإدارة', items: [{ route:'/reports', label:'التقارير', icon:'report', permission:'reports:view' }, { route:'/notifications', label:'التنبيهات', icon:'bell' }, { route:'/users', label:'المستخدمون والصلاحيات', icon:'users', ownerOnly:true }, { route:'/settings', label:'الإعدادات', icon:'settings', ownerOnly:true }] }
@@ -26,7 +26,7 @@ const openSidebar = () => { sidebar.classList.add('open'); overlay.classList.rem
 
 const visibleItem = (user, item) => user.role === 'patient'
   ? Boolean(item.roles?.includes('patient'))
-  : (!item.ownerOnly || user.role === 'owner') && (!item.roles || item.roles.includes(user.role)) && (!item.permission || can(user, item.permission) || (item.permission === 'patients:view_all' && can(user, 'patients:view_assigned')));
+  : (!item.ownerOnly || user.role === 'owner') && (!item.roles || item.roles.includes(user.role)) && (!item.permission || can(user, item.permission) || (item.permission === 'patients:view_all' && can(user, 'patients:view_assigned')) || (item.permission === 'appointments:view_all' && can(user, 'appointments:view_assigned')));
 
 const renderSidebar = (user, currentPath = window.location.pathname) => {
   const sections = navSections.map((section) => {

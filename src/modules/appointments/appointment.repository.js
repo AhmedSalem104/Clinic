@@ -161,7 +161,26 @@ const availableSlots = async ({ doctorId, serviceId, date }) => {
   };
 };
 
+const ensurePrimaryAssignmentInTransaction = async (transaction, patientId, doctorId) => {
+  const existing = await transaction.request()
+    .input('patientId', sql.Int, patientId)
+    .query(`SELECT TOP 1 Id,DoctorId FROM PatientAssignments WITH (UPDLOCK,HOLDLOCK)
+      WHERE PatientId=@patientId AND AssignmentType=N'primary' AND EndedAt IS NULL
+      ORDER BY AssignedAt DESC`);
+  if (existing.recordset[0]) return { ...existing.recordset[0], Created: false };
+
+  const result = await transaction.request()
+    .input('patientId', sql.Int, patientId)
+    .input('doctorId', sql.Int, doctorId)
+    .input('assignedBy', sql.Int, null)
+    .query(`INSERT INTO PatientAssignments (PatientId,DoctorId,AssignmentType,AssignedBy)
+      OUTPUT INSERTED.Id,INSERTED.DoctorId
+      VALUES (@patientId,@doctorId,N'primary',@assignedBy)`);
+  return { ...result.recordset[0], Created: true };
+};
+
 const createInTransaction = async (transaction, { patientId, doctorId, serviceId, bookingSource, startAt, notes, createdBy }) => {
+  const primaryAssignment = await ensurePrimaryAssignmentInTransaction(transaction, patientId, doctorId);
   const context = await loadScheduleContext(transaction.request(), doctorId, serviceId, startAt);
   validateBookableTime({ context, startAt });
 
@@ -218,6 +237,7 @@ const createInTransaction = async (transaction, { patientId, doctorId, serviceId
       .input('duration', sql.Int, service.BaseDurationMinutes)
       .query(`INSERT INTO QueueEntries (AppointmentId,PatientId,DoctorId,ServiceId,QueueNumber,Position,QueueDate,Status,ExpectedDurationMinutes) VALUES (@appointmentId,@patientId,@doctorId,@serviceId,@queueNumber,@position,@queueDate,N'booked',@duration)`);
   }
+  appointment.PrimaryAssignmentCreated = primaryAssignment.Created;
   return appointment;
 };
 
@@ -258,4 +278,4 @@ const updateStatus = async (id, status, reason) => withTransaction(async (transa
   return appointment;
 });
 
-module.exports = { list, availableSlots, create, createInTransaction, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES };
+module.exports = { list, availableSlots, create, createInTransaction, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES, ensurePrimaryAssignmentInTransaction };

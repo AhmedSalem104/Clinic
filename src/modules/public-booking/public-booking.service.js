@@ -8,6 +8,7 @@ const queueService = require('../queue/queue.service');
 const { emitClinicEvent } = require('../../realtime/socket');
 const { clinicDateKey } = require('../../utils/date');
 const { AppError } = require('../../utils/errors');
+const { resolveBookingLocation } = require('../../services/location.service');
 
 const dateKey = (value) => clinicDateKey(value || Date.now());
 const OPTIONS_CACHE_TTL_MS = 15 * 1000;
@@ -42,6 +43,7 @@ const createBooking = async (body, req) => {
   const normalizedPhone = normalizePhone(body.phone);
   if (normalizedPhone.length < 5) throw new AppError('أدخلي رقم هاتف صحيحًا.', 400, 'INVALID_PHONE');
   if (new Date(body.startAt).getTime() <= Date.now()) throw new AppError('اختاري موعدًا مستقبليًا.', 409, 'BOOKING_IN_PAST');
+  const location = await resolveBookingLocation(body);
 
   let confirmation = await withTransaction(async (transaction) => {
     let patient = await bookingRepository.findPatientByPhoneInTransaction(transaction, normalizedPhone);
@@ -53,9 +55,10 @@ const createBooking = async (body, req) => {
         dateOfBirth: body.dateOfBirth || null,
         phone: String(body.phone).trim(),
         normalizedPhone,
-        preferredContactChannel: body.preferredContactChannel || null
+        preferredContactChannel: body.preferredContactChannel || null,
+        ...(location || {})
       });
-    }
+    } else if (location) await bookingRepository.updatePatientLocationInTransaction(transaction, patient.Id, location);
     const appointment = await appointmentRepository.createInTransaction(transaction, {
       patientId: patient.Id,
       doctorId: body.doctorId,
@@ -65,13 +68,22 @@ const createBooking = async (body, req) => {
       notes: null,
       createdBy: null
     });
-    return bookingRepository.confirmationInTransaction(transaction, appointment.Id);
+    const result = await bookingRepository.confirmationInTransaction(transaction, appointment.Id);
+    return { ...result, location, primaryAssignmentCreated: Boolean(appointment.PrimaryAssignmentCreated) };
   });
 
   if (!confirmation) throw new AppError('تعذر تأكيد الحجز.', 500, 'BOOKING_CONFIRMATION_FAILED');
   const appointment = await appointmentRepository.getById(confirmation.AppointmentId);
   try { await enqueueBookingConfirmed(appointment); } catch (_) { /* notification failure must not cancel the booking */ }
-  await recordAudit({ req, action: 'public_booking', entity: 'appointment', entityId: confirmation.AppointmentId, newValue: { appointmentId: confirmation.AppointmentId, patientId: confirmation.PatientId, doctorId: confirmation.DoctorId, serviceId: confirmation.ServiceId } });
+  await recordAudit({ req, action: 'public_booking', entity: 'appointment', entityId: confirmation.AppointmentId, newValue: {
+    appointmentId: confirmation.AppointmentId,
+    patientId: confirmation.PatientId,
+    doctorId: confirmation.DoctorId,
+    serviceId: confirmation.ServiceId,
+    locationCaptured: Boolean(confirmation.location),
+    addressSource: confirmation.location?.addressSource || null,
+    primaryAssignmentCreated: Boolean(confirmation.primaryAssignmentCreated)
+  } });
   if (confirmation.DoctorId) {
     await queueService.emitRecalculated(confirmation.DoctorId, dateKey(confirmation.StartAt));
     emitClinicEvent('appointment:updated', { appointmentId: confirmation.AppointmentId }, confirmation.DoctorId);

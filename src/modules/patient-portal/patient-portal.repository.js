@@ -32,7 +32,7 @@ const register = async (data) => withTransaction(async (transaction) => {
       .input('address', sql.NVarChar(500), data.address || null)
       .input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
       .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
-      .query(`UPDATE Patients SET FullName=@fullName,NormalizedName=@normalizedName,DateOfBirth=COALESCE(@dateOfBirth,DateOfBirth),AlternatePhone=COALESCE(NULLIF(@alternatePhone,N''),AlternatePhone),PreferredContactChannel=COALESCE(NULLIF(@preferredContactChannel,N''),PreferredContactChannel),Address=COALESCE(NULLIF(@address,N''),Address),EmergencyContactName=COALESCE(NULLIF(@emergencyContactName,N''),EmergencyContactName),EmergencyContactPhone=COALESCE(NULLIF(@emergencyContactPhone,N''),EmergencyContactPhone),UpdatedAt=SYSUTCDATETIME() WHERE Id=@id`);
+      .query(`UPDATE Patients SET FullName=@fullName,NormalizedName=@normalizedName,DateOfBirth=COALESCE(@dateOfBirth,DateOfBirth),AlternatePhone=COALESCE(NULLIF(@alternatePhone,N''),AlternatePhone),PreferredContactChannel=COALESCE(NULLIF(@preferredContactChannel,N''),PreferredContactChannel),Address=COALESCE(NULLIF(@address,N''),Address),AddressSource=CASE WHEN NULLIF(@address,N'') IS NOT NULL THEN N'manual' ELSE AddressSource END,EmergencyContactName=COALESCE(NULLIF(@emergencyContactName,N''),EmergencyContactName),EmergencyContactPhone=COALESCE(NULLIF(@emergencyContactPhone,N''),EmergencyContactPhone),UpdatedAt=SYSUTCDATETIME() WHERE Id=@id`);
     patient = { ...existing, FullName: data.fullName };
     linkedExistingPatient = true;
   } else {
@@ -62,9 +62,9 @@ const register = async (data) => withTransaction(async (transaction) => {
       .input('emergencyContactName', sql.NVarChar(160), data.emergencyContactName || null)
       .input('emergencyContactPhone', sql.NVarChar(40), data.emergencyContactPhone || null)
       .query(`
-        INSERT INTO Patients (PatientCode,FullName,NormalizedName,DateOfBirth,Phone,NormalizedPhone,AlternatePhone,PreferredContactChannel,Address,EmergencyContactName,EmergencyContactPhone,RegistrationSource,ProfileStatus)
+        INSERT INTO Patients (PatientCode,FullName,NormalizedName,DateOfBirth,Phone,NormalizedPhone,AlternatePhone,PreferredContactChannel,Address,AddressSource,EmergencyContactName,EmergencyContactPhone,RegistrationSource,ProfileStatus)
         OUTPUT INSERTED.Id,INSERTED.PatientCode,INSERTED.FullName
-        VALUES (@patientCode,@fullName,@normalizedName,@dateOfBirth,@phone,@normalizedPhone,@alternatePhone,@preferredContactChannel,@address,@emergencyContactName,@emergencyContactPhone,N'patient_portal',N'complete')
+        VALUES (@patientCode,@fullName,@normalizedName,@dateOfBirth,@phone,@normalizedPhone,@alternatePhone,@preferredContactChannel,@address,CASE WHEN NULLIF(@address,N'') IS NOT NULL THEN N'manual' ELSE NULL END,@emergencyContactName,@emergencyContactPhone,N'patient_portal',N'complete')
       `);
     patient = patientResult.recordset[0];
   }

@@ -10,6 +10,14 @@ const dateField = form?.elements.date;
 const slotField = form?.elements.startAt;
 const fullNameField = form?.elements.fullName;
 const phoneField = form?.elements.phone;
+const addressField = form?.elements.address;
+const detectLocationButton = document.querySelector('#detect-location');
+const clearLocationButton = document.querySelector('#clear-location');
+const locationStatus = document.querySelector('#location-status');
+const locationLatitudeField = form?.elements.locationLatitude;
+const locationLongitudeField = form?.elements.locationLongitude;
+const locationAccuracyField = form?.elements.locationAccuracyMeters;
+const locationCapturedAtField = form?.elements.locationCapturedAt;
 const slotsBox = document.querySelector('#available-slots');
 const slotsHelper = document.querySelector('#slots-helper');
 const doctorHelper = document.querySelector('#doctor-helper');
@@ -41,6 +49,49 @@ const showStatus = (message, kind = 'error') => {
 
 const hideStatus = () => {
   statusBox.classList.add('hidden');
+};
+
+const setLocationStatus = (message, kind = 'idle') => {
+  if (!locationStatus) return;
+  locationStatus.textContent = message;
+  locationStatus.className = `booking-location-status is-${kind}`;
+};
+
+const clearLocation = () => {
+  if (locationLatitudeField) locationLatitudeField.value = '';
+  if (locationLongitudeField) locationLongitudeField.value = '';
+  if (locationAccuracyField) locationAccuracyField.value = '';
+  if (locationCapturedAtField) locationCapturedAtField.value = '';
+  clearLocationButton?.classList.add('hidden');
+  setLocationStatus('لن نطلب موقعك إلا بعد الضغط على زر التحديد.', 'idle');
+};
+
+const detectLocation = () => {
+  if (!navigator.geolocation) {
+    setLocationStatus('المتصفح لا يدعم تحديد الموقع. يمكنك كتابة العنوان يدويًا.', 'error');
+    return;
+  }
+  detectLocationButton.disabled = true;
+  detectLocationButton.classList.add('is-loading');
+  setLocationStatus('جاري تحديد موقعك… اسمحي بالوصول إلى الموقع إذا طلب المتصفح ذلك.', 'loading');
+  navigator.geolocation.getCurrentPosition((position) => {
+    const { latitude, longitude, accuracy } = position.coords;
+    locationLatitudeField.value = String(latitude);
+    locationLongitudeField.value = String(longitude);
+    locationAccuracyField.value = Number.isFinite(accuracy) ? String(accuracy) : '';
+    locationCapturedAtField.value = new Date().toISOString();
+    clearLocationButton?.classList.remove('hidden');
+    detectLocationButton.disabled = false;
+    detectLocationButton.classList.remove('is-loading');
+    setLocationStatus('تم تحديد موقعك. سيُحوّل إلى عنوان منظم ويُحفظ مع ملف المريضة عند تأكيد الحجز.', 'success');
+  }, (error) => {
+    detectLocationButton.disabled = false;
+    detectLocationButton.classList.remove('is-loading');
+    const message = error.code === error.PERMISSION_DENIED
+      ? 'لم يتم السماح بالموقع. يمكنك كتابة العنوان يدويًا، والحجز سيستمر بشكل طبيعي.'
+      : 'تعذر تحديد الموقع الآن. يمكنك كتابة العنوان يدويًا والمحاولة لاحقًا.';
+    setLocationStatus(message, 'error');
+  }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 });
 };
 
 const renderSlotsEmpty = (title = 'اختاري تفاصيل الموعد', message = 'ستظهر هنا الأوقات المتاحة للحجز.') => {
@@ -167,6 +218,11 @@ dateField.value = localDateKey();
 dateField.min = dateField.value;
 updateSummary();
 updateProgress();
+detectLocationButton?.addEventListener('click', detectLocation);
+clearLocationButton?.addEventListener('click', clearLocation);
+addressField?.addEventListener('input', () => {
+  if (addressField.value.trim() && locationLatitudeField?.value) setLocationStatus('سيتم حفظ الموقع المحدد مع العنوان المكتوب عند تأكيد الحجز.', 'success');
+});
 renderOptions().catch((error) => {
   doctorField.innerHTML = '<option value="">تعذر تحميل الأطباء</option>';
   doctorField.disabled = true;

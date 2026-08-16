@@ -46,6 +46,12 @@ BEGIN
     AlternatePhone NVARCHAR(40) NULL,
     PreferredContactChannel NVARCHAR(20) NULL,
     Address NVARCHAR(500) NULL,
+    AddressSource NVARCHAR(30) NULL,
+    LocationLatitude DECIMAL(9,6) NULL,
+    LocationLongitude DECIMAL(9,6) NULL,
+    LocationAccuracyMeters DECIMAL(10,2) NULL,
+    LocationCapturedAt DATETIME2(0) NULL,
+    LocationDetailsJson NVARCHAR(MAX) NULL,
     EmergencyContactName NVARCHAR(160) NULL,
     EmergencyContactPhone NVARCHAR(40) NULL,
     RegistrationSource NVARCHAR(30) NOT NULL CONSTRAINT DF_Patients_RegistrationSource DEFAULT N'reception',
@@ -68,6 +74,66 @@ GO
 IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'ProfileStatus') IS NULL
 BEGIN
   ALTER TABLE dbo.Patients ADD ProfileStatus NVARCHAR(20) NOT NULL CONSTRAINT DF_Patients_ProfileStatus DEFAULT N'complete' WITH VALUES;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'AddressSource') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD AddressSource NVARCHAR(30) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'LocationLatitude') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD LocationLatitude DECIMAL(9,6) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'LocationLongitude') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD LocationLongitude DECIMAL(9,6) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'LocationAccuracyMeters') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD LocationAccuracyMeters DECIMAL(10,2) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'LocationCapturedAt') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD LocationCapturedAt DATETIME2(0) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Patients', N'LocationDetailsJson') IS NULL
+BEGIN
+  ALTER TABLE dbo.Patients ADD LocationDetailsJson NVARCHAR(MAX) NULL;
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Patients_LocationLatitude'
+)
+BEGIN
+  ALTER TABLE dbo.Patients ADD CONSTRAINT CK_Patients_LocationLatitude CHECK (LocationLatitude IS NULL OR (LocationLatitude >= -90 AND LocationLatitude <= 90));
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Patients_LocationLongitude'
+)
+BEGIN
+  ALTER TABLE dbo.Patients ADD CONSTRAINT CK_Patients_LocationLongitude CHECK (LocationLongitude IS NULL OR (LocationLongitude >= -180 AND LocationLongitude <= 180));
+END;
+GO
+
+IF OBJECT_ID(N'dbo.Patients', N'U') IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Patients_LocationDetailsJson'
+)
+BEGIN
+  ALTER TABLE dbo.Patients ADD CONSTRAINT CK_Patients_LocationDetailsJson CHECK (LocationDetailsJson IS NULL OR ISJSON(LocationDetailsJson) = 1);
 END;
 GO
 
