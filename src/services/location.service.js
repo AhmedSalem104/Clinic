@@ -25,6 +25,18 @@ const normalizeAddress = (value) => {
   return address ? address.slice(0, 500) : null;
 };
 
+const parseDetailsJson = (value) => {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+const coordinateAddress = ({ latitude, longitude }) => `موقع جغرافي محدد (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
+
 const reverseGeocode = async ({ latitude, longitude }) => {
   try {
     const url = new URL(env.location.reverseGeocoderUrl);
@@ -67,18 +79,22 @@ const resolveBookingLocation = async (body = {}) => {
       : null;
   }
 
-  const geocoded = await reverseGeocode(coordinates);
+  const clientDetails = parseDetailsJson(body.locationDetailsJson);
+  const clientAddress = ['manual', 'reverse_geocoded'].includes(body.locationAddressSource) ? manualAddress : null;
+  const geocoded = clientAddress
+    ? { displayName: clientAddress, details: clientDetails }
+    : await reverseGeocode(coordinates);
   const capturedAtValue = body.locationCapturedAt ? new Date(body.locationCapturedAt) : new Date();
   const capturedAt = Number.isNaN(capturedAtValue.getTime()) ? new Date() : capturedAtValue;
   return {
-    address: geocoded?.displayName || manualAddress,
+    address: geocoded?.displayName || manualAddress || coordinateAddress(coordinates),
     addressSource: geocoded ? 'reverse_geocoded' : manualAddress ? 'manual' : 'browser_geolocation',
     latitude: coordinates.latitude,
     longitude: coordinates.longitude,
     accuracy: coordinates.accuracy,
     capturedAt,
-    detailsJson: geocoded?.details ? JSON.stringify(geocoded.details) : null
+    detailsJson: geocoded?.details ? JSON.stringify(geocoded.details) : clientDetails ? JSON.stringify(clientDetails) : null
   };
 };
 
-module.exports = { normalizeCoordinates, resolveBookingLocation };
+module.exports = { normalizeCoordinates, reverseGeocode, resolveBookingLocation };

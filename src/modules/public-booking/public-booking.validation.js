@@ -15,6 +15,8 @@ const bookingSchema = z.object({
   locationLongitude: optionalNumber(z.number().finite().min(-180).max(180)),
   locationAccuracyMeters: optionalNumber(z.number().finite().min(0).max(100000)),
   locationCapturedAt: z.string().datetime({ offset: true }).optional().nullable().or(z.literal('')),
+  locationDetailsJson: z.string().max(4000).optional().nullable().or(z.literal('')),
+  locationAddressSource: z.enum(['manual', 'reverse_geocoded']).optional().nullable().or(z.literal('')),
   preferredContactChannel: z.enum(['sms', 'whatsapp', 'phone']).optional().nullable().or(z.literal('')),
   doctorId: z.coerce.number().int().positive(),
   serviceId: z.coerce.number().int().positive(),
@@ -30,4 +32,9 @@ const slotsQuerySchema = z.object({
   date: z.string().date()
 });
 
-module.exports = { bookingSchema, optionsQuerySchema, slotsQuerySchema };
+const locationQuerySchema = z.object({
+  locationLatitude: z.coerce.number().finite().min(-90).max(90),
+  locationLongitude: z.coerce.number().finite().min(-180).max(180)
+});
+
+module.exports = { bookingSchema, optionsQuerySchema, slotsQuerySchema, locationQuerySchema };

@@ -116,7 +116,7 @@ const confirmationInTransaction = async (transaction, appointmentId) => {
       SELECT TOP 1
         a.Id AppointmentId,a.StartAt,a.EndAt,a.Price,a.Status,a.PublicTrackingToken,
         a.ExpectedDurationMinutes,a.BookingSource,
-        p.Id PatientId,p.PatientCode,
+        p.Id PatientId,p.PatientCode,p.Address PatientAddress,
         d.Id DoctorId,d.FullName DoctorName,
         s.Id ServiceId,s.Name ServiceName,s.RequiresQueue,
         q.QueueNumber,q.Position

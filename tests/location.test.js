@@ -17,3 +17,18 @@ test('manual address remains optional and does not require geolocation', async (
   assert.equal(result.addressSource, 'manual');
   assert.equal(result.latitude, null);
 });
+
+test('the address preview from the booking form is preserved with its structured location details', async () => {
+  const result = await resolveBookingLocation({
+    address: 'ميدان التحرير، القاهرة، مصر',
+    locationAddressSource: 'reverse_geocoded',
+    locationDetailsJson: JSON.stringify({ road: 'ميدان التحرير', city: 'القاهرة', country: 'مصر' }),
+    locationLatitude: '30.0444',
+    locationLongitude: '31.2357',
+    locationAccuracyMeters: '12'
+  });
+  assert.equal(result.address, 'ميدان التحرير، القاهرة، مصر');
+  assert.equal(result.addressSource, 'reverse_geocoded');
+  assert.equal(result.latitude, 30.0444);
+  assert.deepEqual(JSON.parse(result.detailsJson), { road: 'ميدان التحرير', city: 'القاهرة', country: 'مصر' });
+});

@@ -18,6 +18,8 @@ const locationLatitudeField = form?.elements.locationLatitude;
 const locationLongitudeField = form?.elements.locationLongitude;
 const locationAccuracyField = form?.elements.locationAccuracyMeters;
 const locationCapturedAtField = form?.elements.locationCapturedAt;
+const locationDetailsField = form?.elements.locationDetailsJson;
+const locationAddressSourceField = form?.elements.locationAddressSource;
 const slotsBox = document.querySelector('#available-slots');
 const slotsHelper = document.querySelector('#slots-helper');
 const doctorHelper = document.querySelector('#doctor-helper');
@@ -62,8 +64,27 @@ const clearLocation = () => {
   if (locationLongitudeField) locationLongitudeField.value = '';
   if (locationAccuracyField) locationAccuracyField.value = '';
   if (locationCapturedAtField) locationCapturedAtField.value = '';
+  if (locationDetailsField) locationDetailsField.value = '';
+  if (locationAddressSourceField) locationAddressSourceField.value = addressField?.value.trim() ? 'manual' : '';
   clearLocationButton?.classList.add('hidden');
   setLocationStatus('لن نطلب موقعك إلا بعد الضغط على زر التحديد.', 'idle');
+};
+
+const reverseGeocodeLocation = async (latitude, longitude) => {
+  setLocationStatus('جاري تحويل موقعك إلى عنوان منظم…', 'loading');
+  try {
+    const result = await publicBookingService.reverseGeocode({ locationLatitude: latitude, locationLongitude: longitude });
+    if (result?.address) {
+      addressField.value = result.address;
+      if (locationDetailsField) locationDetailsField.value = result.details ? JSON.stringify(result.details) : '';
+      if (locationAddressSourceField) locationAddressSourceField.value = 'reverse_geocoded';
+      setLocationStatus(`تم تحديد العنوان تلقائيًا: ${result.address}`, 'success');
+    } else {
+      setLocationStatus('تم تحديد الموقع، لكن تعذر استخراج العنوان. يمكنك كتابته يدويًا.', 'error');
+    }
+  } catch (_) {
+    setLocationStatus('تم تحديد الموقع، ويمكنك كتابة العنوان يدويًا وسيتم حفظه مع الحجز.', 'error');
+  }
 };
 
 const detectLocation = () => {
@@ -83,7 +104,8 @@ const detectLocation = () => {
     clearLocationButton?.classList.remove('hidden');
     detectLocationButton.disabled = false;
     detectLocationButton.classList.remove('is-loading');
-    setLocationStatus('تم تحديد موقعك. سيُحوّل إلى عنوان منظم ويُحفظ مع ملف المريضة عند تأكيد الحجز.', 'success');
+    void reverseGeocodeLocation(latitude, longitude);
+    setLocationStatus('تم تحديد موقعك. جاري استخراج العنوان وحفظه مع الحجز…', 'loading');
   }, (error) => {
     detectLocationButton.disabled = false;
     detectLocationButton.classList.remove('is-loading');
@@ -136,6 +158,12 @@ const renderConfirmation = (booking) => {
   const confirmation = document.querySelector('#booking-confirmation');
   confirmation.className = 'booking-confirmation-card';
   confirmation.innerHTML = `<div class="booking-confirmation-head"><div class="booking-confirmation-check" aria-hidden="true">✓</div><h1>تم تأكيد حجزك بنجاح</h1><p>احتفظي بهذه البيانات وأظهريها لفريق الاستقبال عند الوصول إلى العيادة.</p></div><div class="booking-confirmation-grid"><div class="booking-confirmation-item is-blue"><span>معرّف المريضة</span><strong dir="ltr">${escapeHtml(booking.patientCode)}</strong></div><div class="booking-confirmation-item is-blue"><span>رقم الحجز</span><strong dir="ltr">#${escapeHtml(booking.appointmentId)}</strong></div>${booking.queueNumber ? `<div class="booking-confirmation-item"><span>رقم الدور</span><strong>#${escapeHtml(booking.queueNumber)}</strong></div>` : ''}<div class="booking-confirmation-item"><span>السعر</span><strong>${formatMoney(booking.price)}</strong></div><div class="booking-confirmation-item is-wide"><span>تفاصيل الموعد</span><strong>${escapeHtml(booking.doctorName)} · ${escapeHtml(booking.serviceName)}</strong><span>${escapeHtml(formatDateTime(booking.startAt))}</span></div></div><div class="booking-confirmation-actions">${trackingUrl ? `<a class="booking-confirmation-primary" href="${trackingUrl}">متابعة الدور والوقت المتوقع</a>` : ''}<a class="booking-confirmation-secondary" href="${accountUrl}">إنشاء حساب لاحقًا</a><a class="booking-confirmation-ghost" href="/patient-booking.html">حجز موعد آخر</a></div>`;
+  if (booking.address) {
+    const addressItem = document.createElement('div');
+    addressItem.className = 'booking-confirmation-item is-wide';
+    addressItem.innerHTML = `<span>العنوان المحفوظ</span><strong>${escapeHtml(booking.address)}</strong>`;
+    confirmation.querySelector('.booking-confirmation-grid')?.append(addressItem);
+  }
   confirmation.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
@@ -221,6 +249,8 @@ updateProgress();
 detectLocationButton?.addEventListener('click', detectLocation);
 clearLocationButton?.addEventListener('click', clearLocation);
 addressField?.addEventListener('input', () => {
+  if (locationAddressSourceField) locationAddressSourceField.value = addressField.value.trim() ? 'manual' : '';
+  if (locationDetailsField) locationDetailsField.value = '';
   if (addressField.value.trim() && locationLatitudeField?.value) setLocationStatus('سيتم حفظ الموقع المحدد مع العنوان المكتوب عند تأكيد الحجز.', 'success');
 });
 renderOptions().catch((error) => {

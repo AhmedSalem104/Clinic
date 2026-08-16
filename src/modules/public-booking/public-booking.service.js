@@ -98,6 +98,7 @@ const createBooking = async (body, req) => {
     endAt: confirmation.EndAt,
     expectedDurationMinutes: confirmation.ExpectedDurationMinutes,
     price: confirmation.Price,
+    address: confirmation.PatientAddress || location?.address || null,
     status: confirmation.Status,
     queueNumber: confirmation.QueueNumber || null,
     queuePosition: confirmation.Position || null,

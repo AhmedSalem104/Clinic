@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/tailwind.css?v=20260816-booking" />
-    <link rel="stylesheet" href="/css/app.css?v=20260816-location1" />
+    <link rel="stylesheet" href="/css/app.css?v=20260816-location2" />
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body class="booking-page">
@@ -93,6 +93,8 @@
                   <input type="hidden" id="locationLongitude" name="locationLongitude" />
                   <input type="hidden" id="locationAccuracyMeters" name="locationAccuracyMeters" />
                   <input type="hidden" id="locationCapturedAt" name="locationCapturedAt" />
+                  <input type="hidden" id="locationDetailsJson" name="locationDetailsJson" />
+                  <input type="hidden" id="locationAddressSource" name="locationAddressSource" />
                 </div>
               </div>
             </fieldset>
@@ -160,6 +162,6 @@
       <section id="booking-confirmation" class="hidden"></section>
       <footer class="booking-footer"><span>عيادتي · حجز مواعيد النساء والتوليد</span><span>لا يتم طلب OTP للحجز الأول</span></footer>
     </main>
-    <script type="module" src="/js/public-booking.js?v=20260816-location1"></script>
+    <script type="module" src="/js/public-booking.js?v=20260816-location2"></script>
   </body>
 </html>
