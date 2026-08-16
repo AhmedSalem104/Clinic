@@ -36,6 +36,7 @@ const progressLines = [...document.querySelectorAll('.booking-progress > i')];
 
 let slotRequestId = 0;
 let doctorOptionsRequestId = 0;
+let locationDetectionStarted = false;
 
 const formatDateTime = (value) => new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full', timeStyle: 'short' }).format(new Date(value));
 const formatSlot = (value) => new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit' }).format(value);
@@ -60,6 +61,7 @@ const setLocationStatus = (message, kind = 'idle') => {
 };
 
 const clearLocation = () => {
+  locationDetectionStarted = false;
   if (locationLatitudeField) locationLatitudeField.value = '';
   if (locationLongitudeField) locationLongitudeField.value = '';
   if (locationAccuracyField) locationAccuracyField.value = '';
@@ -67,13 +69,18 @@ const clearLocation = () => {
   if (locationDetailsField) locationDetailsField.value = '';
   if (locationAddressSourceField) locationAddressSourceField.value = addressField?.value.trim() ? 'manual' : '';
   clearLocationButton?.classList.add('hidden');
-  setLocationStatus('لن نطلب موقعك إلا بعد الضغط على زر التحديد.', 'idle');
+  setLocationStatus('تم إلغاء تحديد الموقع. يمكنك إعادة التحديد من الزر أو كتابة العنوان يدويًا.', 'idle');
 };
 
 const reverseGeocodeLocation = async (latitude, longitude) => {
   setLocationStatus('جاري تحويل موقعك إلى عنوان منظم…', 'loading');
   try {
     const result = await publicBookingService.reverseGeocode({ locationLatitude: latitude, locationLongitude: longitude });
+    const preserveManualAddress = Boolean(addressField?.value.trim() && locationAddressSourceField?.value === 'manual');
+    if (preserveManualAddress) {
+      setLocationStatus('تم تحديد الموقع، وسيتم حفظ العنوان الذي كتبته المريضة.', 'success');
+      return;
+    }
     if (result?.address) {
       addressField.value = result.address;
       if (locationDetailsField) locationDetailsField.value = result.details ? JSON.stringify(result.details) : '';
@@ -87,28 +94,39 @@ const reverseGeocodeLocation = async (latitude, longitude) => {
   }
 };
 
-const detectLocation = () => {
+const detectLocation = ({ automatic = false } = {}) => {
+  if (locationDetectionStarted) return;
+  locationDetectionStarted = true;
   if (!navigator.geolocation) {
+    locationDetectionStarted = false;
     setLocationStatus('المتصفح لا يدعم تحديد الموقع. يمكنك كتابة العنوان يدويًا.', 'error');
     return;
   }
-  detectLocationButton.disabled = true;
-  detectLocationButton.classList.add('is-loading');
-  setLocationStatus('جاري تحديد موقعك… اسمحي بالوصول إلى الموقع إذا طلب المتصفح ذلك.', 'loading');
+  if (detectLocationButton) {
+    detectLocationButton.disabled = true;
+    detectLocationButton.classList.add('is-loading');
+  }
+  setLocationStatus(automatic ? 'جاري تحديد موقعك تلقائيًا… اسمحي بالوصول إلى الموقع إذا طلب المتصفح ذلك.' : 'جاري تحديد موقعك… اسمحي بالوصول إلى الموقع إذا طلب المتصفح ذلك.', 'loading');
   navigator.geolocation.getCurrentPosition((position) => {
     const { latitude, longitude, accuracy } = position.coords;
     locationLatitudeField.value = String(latitude);
     locationLongitudeField.value = String(longitude);
     locationAccuracyField.value = Number.isFinite(accuracy) ? String(accuracy) : '';
     locationCapturedAtField.value = new Date().toISOString();
+    locationDetectionStarted = false;
     clearLocationButton?.classList.remove('hidden');
-    detectLocationButton.disabled = false;
-    detectLocationButton.classList.remove('is-loading');
+    if (detectLocationButton) {
+      detectLocationButton.disabled = false;
+      detectLocationButton.classList.remove('is-loading');
+    }
     void reverseGeocodeLocation(latitude, longitude);
     setLocationStatus('تم تحديد موقعك. جاري استخراج العنوان وحفظه مع الحجز…', 'loading');
   }, (error) => {
-    detectLocationButton.disabled = false;
-    detectLocationButton.classList.remove('is-loading');
+    locationDetectionStarted = false;
+    if (detectLocationButton) {
+      detectLocationButton.disabled = false;
+      detectLocationButton.classList.remove('is-loading');
+    }
     const message = error.code === error.PERMISSION_DENIED
       ? 'لم يتم السماح بالموقع. يمكنك كتابة العنوان يدويًا، والحجز سيستمر بشكل طبيعي.'
       : 'تعذر تحديد الموقع الآن. يمكنك كتابة العنوان يدويًا والمحاولة لاحقًا.';
@@ -253,6 +271,17 @@ addressField?.addEventListener('input', () => {
   if (locationDetailsField) locationDetailsField.value = '';
   if (addressField.value.trim() && locationLatitudeField?.value) setLocationStatus('سيتم حفظ الموقع المحدد مع العنوان المكتوب عند تأكيد الحجز.', 'success');
 });
+const autoDetectLocation = async () => {
+  if (!navigator.geolocation || addressField?.value.trim() || locationLatitudeField?.value) return;
+  try {
+    const permission = await navigator.permissions?.query({ name: 'geolocation' });
+    if (permission?.state === 'denied') return;
+  } catch (_) {
+    // Some browsers do not expose the Permissions API; geolocation will handle permission itself.
+  }
+  if (!addressField?.value.trim() && !locationLatitudeField?.value) detectLocation({ automatic: true });
+};
+window.setTimeout(autoDetectLocation, 450);
 renderOptions().catch((error) => {
   doctorField.innerHTML = '<option value="">تعذر تحميل الأطباء</option>';
   doctorField.disabled = true;

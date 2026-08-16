@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/css/tailwind.css?v=20260816-booking" />
-    <link rel="stylesheet" href="/css/app.css?v=20260816-location2" />
+    <link rel="stylesheet" href="/css/app.css?v=20260816-location3" />
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body class="booking-page">
@@ -88,7 +88,7 @@
                 <div class="booking-field booking-field-address">
                   <div class="booking-address-label-row"><label class="form-label" for="address">العنوان <span class="booking-optional">اختياري</span></label><button id="detect-location" class="booking-location-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12Z"/><circle cx="12" cy="9" r="2.3"/></svg><span>تحديد موقعي تلقائيًا</span></button></div>
                   <textarea class="textarea booking-address-input" id="address" name="address" rows="2" maxlength="500" placeholder="يمكنك كتابة العنوان يدويًا أو تحديده من موقعك الحالي"></textarea>
-                  <div class="booking-location-meta"><span id="location-status" role="status" aria-live="polite">لن نطلب موقعك إلا بعد الضغط على زر التحديد.</span><button id="clear-location" class="booking-location-clear hidden" type="button">إلغاء التحديد</button></div>
+                  <div class="booking-location-meta"><span id="location-status" role="status" aria-live="polite">سيحاول النظام تحديد موقعك تلقائيًا عند فتح الصفحة بعد موافقة المتصفح.</span><button id="clear-location" class="booking-location-clear hidden" type="button">إلغاء التحديد</button></div>
                   <input type="hidden" id="locationLatitude" name="locationLatitude" />
                   <input type="hidden" id="locationLongitude" name="locationLongitude" />
                   <input type="hidden" id="locationAccuracyMeters" name="locationAccuracyMeters" />
@@ -162,6 +162,6 @@
       <section id="booking-confirmation" class="hidden"></section>
       <footer class="booking-footer"><span>عيادتي · حجز مواعيد النساء والتوليد</span><span>لا يتم طلب OTP للحجز الأول</span></footer>
     </main>
-    <script type="module" src="/js/public-booking.js?v=20260816-location2"></script>
+    <script type="module" src="/js/public-booking.js?v=20260816-location3"></script>
   </body>
 </html>
