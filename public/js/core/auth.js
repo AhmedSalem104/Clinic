@@ -19,8 +19,7 @@ export const auth = {
     return currentUser;
   },
   async logout() {
-    await api.post('/auth/logout');
-    currentUser = null;
+    try { await api.post('/auth/logout'); } catch (_) { /* The cookie may already be expired. */ } finally { currentUser = null; }
   },
   user() { return currentUser; },
   isAuthenticated() { return Boolean(currentUser); }

@@ -38,5 +38,22 @@ export const toast = (title, iconName = 'success') => window.Swal?.fire({ toast:
 export const confirm = async (title, text, confirmButtonText = 'تأكيد') => { const result = await window.Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonText, cancelButtonText: 'إلغاء', reverseButtons: true, confirmButtonColor: '#2563eb' }); return result.isConfirmed; };
 export const loadingButton = (button, loading) => { if (!button) return; button.disabled = loading; button.dataset.original = button.dataset.original || button.innerHTML; button.innerHTML = loading ? '<span class="animate-spin inline-block">◌</span> جارٍ الحفظ...' : button.dataset.original; };
 export const debounce = (fn, wait = 350) => { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => fn(...args), wait); }; };
+export const startPolling = (callback, interval = 10000) => {
+  let stopped = false;
+  let running = false;
+  const run = async () => {
+    if (stopped || running || document.hidden) return;
+    running = true;
+    try { await callback(); } finally { running = false; }
+  };
+  const timer = window.setInterval(run, interval);
+  const onVisibilityChange = () => { if (!document.hidden) void run(); };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  return () => {
+    stopped = true;
+    window.clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  };
+};
 export const formValue = (form, name) => { const field=form.elements[name]; if(!field) return null; if(field.type==='checkbox') return field.checked; return field.value || null; };
 export const deleteButton = (attribute, id, label = 'حذف نهائي') => { const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-danger text-xs'; button.dataset[attribute] = String(id); button.title = 'حذف نهائي'; button.innerHTML = `${icon('close')} ${label}`; return button; };

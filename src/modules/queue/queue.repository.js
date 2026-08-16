@@ -2,6 +2,7 @@ const { query, withTransaction } = require('../../db/repository');
 const { sql } = require('../../db/connection');
 const { recalculateQueue } = require('../../utils/waiting-time');
 const { clinicDateKey } = require('../../utils/date');
+const { AppError } = require('../../utils/errors');
 
 const ACTIVE_QUEUE_STATUSES = [
   'booked',
@@ -11,6 +12,19 @@ const ACTIVE_QUEUE_STATUSES = [
   'late',
   'in_consultation'
 ];
+
+const QUEUE_STATUS_TRANSITIONS = Object.freeze({
+  booked: ['confirmed', 'arrived', 'waiting', 'late', 'in_consultation', 'no_show', 'cancelled', 'skipped'],
+  confirmed: ['arrived', 'waiting', 'late', 'in_consultation', 'no_show', 'cancelled', 'skipped'],
+  arrived: ['waiting', 'late', 'in_consultation', 'no_show', 'cancelled', 'skipped'],
+  waiting: ['late', 'in_consultation', 'no_show', 'cancelled', 'skipped'],
+  late: ['waiting', 'in_consultation', 'completed', 'no_show', 'cancelled', 'skipped'],
+  in_consultation: ['completed', 'cancelled'],
+  completed: [],
+  no_show: [],
+  cancelled: [],
+  skipped: []
+});
 
 const dateKey = (value) => {
   if (value instanceof Date) return clinicDateKey(value);
@@ -46,13 +60,22 @@ const queueList = async ({ doctorId, date }) => {
 };
 
 const setStatus = async (id, status) => withTransaction(async (transaction) => {
+  const currentResult = await transaction.request()
+    .input('id', sql.Int, id)
+    .query('SELECT TOP 1 * FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id');
+  const current = currentResult.recordset[0];
+  if (!current) return null;
+  if (current.Status === status) return current;
+  if (!(QUEUE_STATUS_TRANSITIONS[current.Status] || []).includes(status)) {
+    throw new AppError(`لا يمكن نقل الدور من «${current.Status}» إلى «${status}».`, 409, 'INVALID_QUEUE_TRANSITION', { from: current.Status, to: status });
+  }
   const result = await transaction.request()
     .input('id', sql.Int, id)
     .input('status', sql.NVarChar(30), status)
     .query(`
       UPDATE q
       SET Status=@status,
-        CheckedInAt=CASE WHEN @status IN (N'arrived',N'waiting',N'late') AND q.CheckedInAt IS NULL THEN SYSUTCDATETIME() ELSE q.CheckedInAt END,
+        CheckedInAt=CASE WHEN @status IN (N'arrived',N'waiting',N'late',N'in_consultation') AND q.CheckedInAt IS NULL THEN SYSUTCDATETIME() ELSE q.CheckedInAt END,
         ConsultationStartedAt=CASE WHEN @status=N'in_consultation' THEN COALESCE(q.ConsultationStartedAt,SYSUTCDATETIME()) ELSE q.ConsultationStartedAt END,
         ConsultationEndedAt=CASE WHEN @status=N'completed' THEN SYSUTCDATETIME() ELSE q.ConsultationEndedAt END,
         ActualDurationMinutes=CASE WHEN @status=N'completed' AND q.ConsultationStartedAt IS NOT NULL THEN DATEDIFF(MINUTE,q.ConsultationStartedAt,SYSUTCDATETIME()) ELSE q.ActualDurationMinutes END,
@@ -80,9 +103,10 @@ const setStatus = async (id, status) => withTransaction(async (transaction) => {
 const reorder = async (id, position) => withTransaction(async (transaction) => {
   const current = await transaction.request()
     .input('id', sql.Int, id)
-    .query('SELECT DoctorId,Position,COALESCE(QueueDate,CONVERT(date,a.StartAt)) QueueDate FROM QueueEntries q JOIN Appointments a ON a.Id=q.AppointmentId WHERE q.Id=@id');
+    .query('SELECT DoctorId,Position,Status,COALESCE(QueueDate,CONVERT(date,a.StartAt)) QueueDate FROM QueueEntries q JOIN Appointments a ON a.Id=q.AppointmentId WHERE q.Id=@id');
   const row = current.recordset[0];
   if (!row) return null;
+  if (!ACTIVE_QUEUE_STATUSES.includes(row.Status)) throw new AppError('لا يمكن إعادة ترتيب دور غير نشط.', 409, 'QUEUE_ENTRY_NOT_ACTIVE');
 
   const targetPosition = Math.max(1, Number(position));
   const activeFilter = `DoctorId=@doctorId AND QueueDate=@queueDate AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'late',N'in_consultation')`;
@@ -228,4 +252,4 @@ const recalculateForDoctor = async (doctorId, date) => withTransaction(async (tr
   return recalculated;
 });
 
-module.exports = { list: queueList, setStatus, reorder, pause, resume, recalculateForDoctor };
+module.exports = { list: queueList, setStatus, reorder, pause, resume, recalculateForDoctor, ACTIVE_QUEUE_STATUSES, QUEUE_STATUS_TRANSITIONS };

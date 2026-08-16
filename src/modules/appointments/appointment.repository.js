@@ -12,6 +12,19 @@ const ACTIVE_APPOINTMENT_STATUSES = [
   'late'
 ];
 
+const APPOINTMENT_STATUS_TRANSITIONS = Object.freeze({
+  booked: ['confirmed', 'cancelled', 'no_show'],
+  confirmed: ['cancelled', 'no_show'],
+  arrived: ['cancelled', 'no_show'],
+  waiting: ['cancelled', 'no_show'],
+  late: ['cancelled', 'no_show'],
+  in_consultation: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+  skipped: []
+});
+
 const clockToMinutes = (value) => {
   if (value instanceof Date) return value.getUTCHours() * 60 + value.getUTCMinutes();
   const [hours = 0, minutes = 0] = String(value || '0:0').split(':').map(Number);
@@ -221,11 +234,11 @@ const createInTransaction = async (transaction, { patientId, doctorId, serviceId
     const queueNumber = await transaction.request()
       .input('doctorId', sql.Int, doctorId)
       .input('date', sql.Date, new Date(startAt))
-      .query('SELECT COALESCE(MAX(QueueNumber),0)+1 NextNumber FROM QueueEntries WHERE DoctorId=@doctorId AND QueueDate=@date');
+      .query('SELECT COALESCE(MAX(QueueNumber),0)+1 NextNumber FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE DoctorId=@doctorId AND QueueDate=@date');
     const position = await transaction.request()
       .input('doctorId', sql.Int, doctorId)
       .input('date', sql.Date, new Date(startAt))
-      .query(`SELECT COUNT(1)+1 NextPosition FROM QueueEntries WHERE DoctorId=@doctorId AND QueueDate=@date AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'late',N'in_consultation')`);
+      .query(`SELECT COUNT(1)+1 NextPosition FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE DoctorId=@doctorId AND QueueDate=@date AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'late',N'in_consultation')`);
     await transaction.request()
       .input('appointmentId', sql.Int, appointment.Id)
       .input('patientId', sql.Int, patientId)
@@ -263,8 +276,8 @@ const reschedule = async (id, startAt) => withTransaction(async (transaction) =>
     const queue = await transaction.request().input('appointmentId', sql.Int, id).query('SELECT TOP 1 Id,QueueDate FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE AppointmentId=@appointmentId');
     if (queue.recordset[0]) {
       const newDate = new Date(startAt);
-      const nextNumber = await transaction.request().input('doctorId', sql.Int, current.DoctorId).input('queueDate', sql.Date, newDate).input('queueId', sql.Int, queue.recordset[0].Id).query('SELECT COALESCE(MAX(QueueNumber),0)+1 NextNumber FROM QueueEntries WHERE DoctorId=@doctorId AND QueueDate=@queueDate AND Id<>@queueId');
-      const nextPosition = await transaction.request().input('doctorId', sql.Int, current.DoctorId).input('queueDate', sql.Date, newDate).input('queueId', sql.Int, queue.recordset[0].Id).query(`SELECT COUNT(1)+1 NextPosition FROM QueueEntries WHERE DoctorId=@doctorId AND QueueDate=@queueDate AND Id<>@queueId AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'late',N'in_consultation')`);
+      const nextNumber = await transaction.request().input('doctorId', sql.Int, current.DoctorId).input('queueDate', sql.Date, newDate).input('queueId', sql.Int, queue.recordset[0].Id).query('SELECT COALESCE(MAX(QueueNumber),0)+1 NextNumber FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE DoctorId=@doctorId AND QueueDate=@queueDate AND Id<>@queueId');
+      const nextPosition = await transaction.request().input('doctorId', sql.Int, current.DoctorId).input('queueDate', sql.Date, newDate).input('queueId', sql.Int, queue.recordset[0].Id).query(`SELECT COUNT(1)+1 NextPosition FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE DoctorId=@doctorId AND QueueDate=@queueDate AND Id<>@queueId AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'late',N'in_consultation')`);
       await transaction.request().input('queueId', sql.Int, queue.recordset[0].Id).input('queueDate', sql.Date, newDate).input('queueNumber', sql.Int, nextNumber.recordset[0].NextNumber).input('position', sql.Int, nextPosition.recordset[0].NextPosition).query('UPDATE QueueEntries SET QueueDate=@queueDate,QueueNumber=@queueNumber,Position=@position,UpdatedAt=SYSUTCDATETIME() WHERE Id=@queueId');
     }
   }
@@ -272,10 +285,17 @@ const reschedule = async (id, startAt) => withTransaction(async (transaction) =>
 });
 
 const updateStatus = async (id, status, reason) => withTransaction(async (transaction) => {
+  const currentResult = await transaction.request().input('id', sql.Int, id).query('SELECT TOP 1 * FROM Appointments WITH (UPDLOCK,HOLDLOCK) WHERE Id=@id');
+  const current = currentResult.recordset[0];
+  if (!current) return null;
+  if (current.Status === status) return current;
+  if (!(APPOINTMENT_STATUS_TRANSITIONS[current.Status] || []).includes(status)) {
+    throw new AppError(`لا يمكن نقل حالة الموعد من «${current.Status}» إلى «${status}».`, 409, 'INVALID_APPOINTMENT_TRANSITION', { from: current.Status, to: status });
+  }
   const result = await transaction.request().input('id', sql.Int, id).input('status', sql.NVarChar(30), status).input('reason', sql.NVarChar(500), reason || null).query(`UPDATE Appointments SET Status=@status,CancellationReason=@reason,UpdatedAt=SYSUTCDATETIME() OUTPUT INSERTED.* WHERE Id=@id`);
   const appointment = result.recordset[0] || null;
-  if (appointment && ['cancelled', 'no_show', 'completed', 'skipped'].includes(status)) await transaction.request().input('appointmentId', sql.Int, id).input('status', sql.NVarChar(30), status).query('UPDATE QueueEntries SET Status=@status,UpdatedAt=SYSUTCDATETIME() WHERE AppointmentId=@appointmentId');
+  if (appointment) await transaction.request().input('appointmentId', sql.Int, id).input('status', sql.NVarChar(30), status).query('UPDATE QueueEntries SET Status=@status,UpdatedAt=SYSUTCDATETIME() WHERE AppointmentId=@appointmentId');
   return appointment;
 });
 
-module.exports = { list, availableSlots, create, createInTransaction, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES, ensurePrimaryAssignmentInTransaction };
+module.exports = { list, availableSlots, create, createInTransaction, getById, reschedule, updateStatus, ACTIVE_APPOINTMENT_STATUSES, APPOINTMENT_STATUS_TRANSITIONS, ensurePrimaryAssignmentInTransaction };

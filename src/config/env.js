@@ -19,6 +19,10 @@ const toNumber = (value, fallback) => {
 };
 
 const runningOnVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+const productionLike = process.env.NODE_ENV === 'production' || runningOnVercel;
+if (productionLike && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be configured in production environments.');
+}
 const configuredUploadDir = process.env.UPLOAD_DIR || 'storage/uploads';
 // Vercel functions can only write to /tmp. Configure durable object storage
 // before enabling production document uploads.
@@ -34,7 +38,7 @@ const env = Object.freeze({
   runningOnVercel,
   jwtSecret: process.env.JWT_SECRET || 'development-only-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
-  cookieSecure: toBoolean(process.env.COOKIE_SECURE, false),
+  cookieSecure: toBoolean(process.env.COOKIE_SECURE, productionLike),
   db: {
     server: process.env.DB_SERVER,
     database: process.env.DB_DATABASE,
@@ -50,6 +54,7 @@ const env = Object.freeze({
     }
   },
   uploadDir,
+  fileStorageProvider: process.env.FILE_STORAGE_PROVIDER || (runningOnVercel ? 'unconfigured' : 'local'),
   maxUploadBytes: toNumber(process.env.MAX_UPLOAD_BYTES, 10 * 1024 * 1024),
   location: {
     reverseGeocoderUrl: process.env.REVERSE_GEOCODER_URL || 'https://nominatim.openstreetmap.org/reverse',

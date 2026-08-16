@@ -1,7 +1,7 @@
 import { appointmentService } from '../services/appointment-service.js';
 import { auth } from '../core/auth.js';
 import { can } from '../core/permissions.js';
-import { escapeHtml, formatDateTime, statusBadge, emptyState, icon, localDateKey } from '../core/ui.js';
+import { escapeHtml, formatDateTime, statusBadge, emptyState, icon, localDateKey, startPolling } from '../core/ui.js';
 
 const bookingSourceLabel = { online: 'إلكتروني', phone: 'هاتف', walk_in: 'بدون موعد', reception: 'الريسبشن' };
 
@@ -33,5 +33,12 @@ export async function render(outlet) {
   let searchTimer;
   document.querySelector('#appointment-search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(load, 350); });
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
-  document.addEventListener('clinic:realtime', load);
+  const onRealtime = () => { void load(); };
+  document.addEventListener('clinic:realtime', onRealtime);
+  const stopPolling = startPolling(load, 10000);
+  return () => {
+    clearTimeout(searchTimer);
+    stopPolling();
+    document.removeEventListener('clinic:realtime', onRealtime);
+  };
 }

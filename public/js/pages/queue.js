@@ -1,6 +1,6 @@
 import { api } from '../core/api-service.js';
 import { clinicService } from '../services/clinic-service.js';
-import { escapeHtml, formatDateTime, statusBadge, emptyState, toast, confirm, localDateKey, icon } from '../core/ui.js';
+import { escapeHtml, formatDateTime, statusBadge, emptyState, toast, confirm, localDateKey, icon, startPolling } from '../core/ui.js';
 
 const activeStatuses = ['booked', 'confirmed', 'arrived', 'waiting', 'late', 'in_consultation'];
 
@@ -40,6 +40,12 @@ export async function render(outlet) {
     if (!result.isConfirmed) return;
     try { await api.post('/queue/pauses', { doctorId: Number(doctorSelect.value), reason: result.value || null }); toast('تم تسجيل التوقف'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تسجيل التوقف', text: error.message }); }
   });
-  document.addEventListener('clinic:realtime', load);
+  const onRealtime = () => { void load(); };
+  document.addEventListener('clinic:realtime', onRealtime);
+  const stopPolling = startPolling(load, 10000);
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
+  return () => {
+    stopPolling();
+    document.removeEventListener('clinic:realtime', onRealtime);
+  };
 }

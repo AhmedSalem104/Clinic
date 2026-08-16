@@ -4,7 +4,7 @@ const { AppError } = require('../../utils/errors');
 
 const findByEmail = async (email) => {
   const result = await query(`
-    SELECT TOP 1 Id, FullName, Email, PasswordHash, Role, DoctorId, PatientId, IsActive
+    SELECT TOP 1 Id, FullName, Email, PasswordHash, Role, DoctorId, PatientId, IsActive, SessionVersion
     FROM Users WHERE Email = @email
   `, (request) => request.input('email', sql.NVarChar(255), email));
   return result.recordset[0] || null;
@@ -12,7 +12,7 @@ const findByEmail = async (email) => {
 
 const findById = async (id) => {
   const result = await query(`
-    SELECT TOP 1 Id, FullName, Email, Role, DoctorId, PatientId, IsActive, LastLoginAt, CreatedAt
+    SELECT TOP 1 Id, FullName, Email, Role, DoctorId, PatientId, IsActive, SessionVersion, LastLoginAt, CreatedAt
     FROM Users WHERE Id = @id
   `, (request) => request.input('id', sql.Int, id));
   return result.recordset[0] || null;
@@ -23,7 +23,13 @@ const getManageableById = async (id) => {
   return result.recordset[0] || null;
 };
 
+const findSessionState = async (id) => {
+  const result = await query('SELECT TOP 1 Id, Role, DoctorId, PatientId, IsActive, SessionVersion FROM Users WHERE Id=@id', (request) => request.input('id', sql.Int, id));
+  return result.recordset[0] || null;
+};
+
 const touchLastLogin = (id) => query('UPDATE Users SET LastLoginAt = SYSUTCDATETIME() WHERE Id = @id', (request) => request.input('id', sql.Int, id));
+const rotateSession = (id) => query('UPDATE Users SET SessionVersion = ISNULL(SessionVersion, 1) + 1, UpdatedAt = SYSUTCDATETIME() WHERE Id=@id', (request) => request.input('id', sql.Int, id));
 
 const list = async ({ pageSize, offset }) => {
   const result = await query(`
@@ -50,7 +56,7 @@ const createUser = async ({ fullName, email, passwordHash, role, doctorId, patie
 };
 
 const updateStatus = async (id, isActive) => {
-  const result = await query(`UPDATE Users SET IsActive = @isActive, UpdatedAt = SYSUTCDATETIME() WHERE Id = @id`, (request) => request.input('id', sql.Int, id).input('isActive', sql.Bit, isActive));
+  const result = await query(`UPDATE Users SET IsActive = @isActive, SessionVersion = ISNULL(SessionVersion, 1) + 1, UpdatedAt = SYSUTCDATETIME() WHERE Id = @id`, (request) => request.input('id', sql.Int, id).input('isActive', sql.Bit, isActive));
   return result.rowsAffected[0] > 0;
 };
 
@@ -58,7 +64,7 @@ const updateUser = async (id, { fullName, email, role, doctorId, patientId, pass
   const result = await query(`
     UPDATE Users
     SET FullName=@fullName, Email=@email, Role=@role, DoctorId=@doctorId, PatientId=@patientId,
-      PasswordHash=COALESCE(@passwordHash, PasswordHash), UpdatedAt=SYSUTCDATETIME()
+      PasswordHash=COALESCE(@passwordHash, PasswordHash), SessionVersion=ISNULL(SessionVersion, 1) + 1, UpdatedAt=SYSUTCDATETIME()
     OUTPUT INSERTED.Id, INSERTED.FullName, INSERTED.Email, INSERTED.Role, INSERTED.DoctorId, INSERTED.PatientId, INSERTED.IsActive, INSERTED.UpdatedAt
     WHERE Id=@id
   `, (request) => request.input('id', sql.Int, id)
@@ -104,4 +110,4 @@ const removeUser = async (id) => withTransaction(async (transaction) => {
   return result.recordset[0] || null;
 });
 
-module.exports = { findByEmail, findById, getManageableById, touchLastLogin, list, createUser, updateUser, updateStatus, removeUser };
+module.exports = { findByEmail, findById, findSessionState, getManageableById, touchLastLogin, rotateSession, list, createUser, updateUser, updateStatus, removeUser };

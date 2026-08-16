@@ -42,6 +42,7 @@ export const normalizePath = (path) => {
 
 export const createRouter = ({ outlet, onRoute }) => {
   let current = null;
+  let renderSequence = 0;
   let localizationFrame = null;
   let localizationObserver;
   const scheduleLocalization = () => {
@@ -57,17 +58,33 @@ export const createRouter = ({ outlet, onRoute }) => {
   localizationObserver.observe(outlet, { childList: true, subtree: true });
   const resolve = (path) => routes.find((route) => route.match.test(pathnameOf(path)));
   const render = async (path = normalizePath(`${window.location.pathname}${window.location.search}`)) => {
+    const sequence = ++renderSequence;
     const normalized = normalizePath(path);
     const routePath = pathnameOf(normalized);
     const found = resolve(routePath) || routes[0];
     const match = found.match.exec(routePath);
     if (!resolve(normalized)) window.history.replaceState({}, '', '/dashboard');
+    if (current?.cleanup) {
+      try { current.cleanup(); } catch (error) { console.warn('Route cleanup failed', error); }
+    }
+    current = null;
     outlet.innerHTML = '<div class="py-16">' + '<div class="skeleton h-8 w-1/3 mb-6"></div><div class="skeleton h-4 w-2/3"></div>' + '</div>';
     try {
       const module = await found.load();
-      current = { path: normalized, module };
-      await module.render(outlet, { params: match?.slice(1) || [], path: normalized });
-      if (module.mount) await module.mount(outlet, { params: match?.slice(1) || [], path: normalized });
+      if (sequence !== renderSequence) return;
+      const context = { params: match?.slice(1) || [], path: normalized };
+      const renderedCleanup = await module.render(outlet, context);
+      const mountedCleanup = module.mount ? await module.mount(outlet, context) : null;
+      if (sequence !== renderSequence) {
+        if (typeof mountedCleanup === 'function') mountedCleanup();
+        if (typeof renderedCleanup === 'function') renderedCleanup();
+        return;
+      }
+      const cleanup = () => {
+        if (typeof mountedCleanup === 'function') mountedCleanup();
+        if (typeof renderedCleanup === 'function') renderedCleanup();
+      };
+      current = { path: normalized, module, cleanup };
       localizePage(outlet);
       outlet.focus({ preventScroll: true });
       onRoute?.(normalized);

@@ -9,6 +9,6 @@ const { asyncHandler } = require('../../utils/errors');
 const router = express.Router();
 router.post('/login', validate(loginSchema), asyncHandler(controller.login));
 router.get('/me', requireAuth, asyncHandler(controller.me));
-router.post('/logout', asyncHandler(controller.logout));
+router.post('/logout', requireAuth, asyncHandler(controller.logout));
 
 module.exports = { router };

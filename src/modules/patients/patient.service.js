@@ -24,7 +24,16 @@ const shape = (body) => ({
   profileStatus: body.profileStatus || null
 });
 
-const list = async (params) => repository.list({ ...params, search: normalizeText(params.search || '') });
+const list = async (params) => {
+  const result = await repository.list({ ...params, search: normalizeText(params.search || '') });
+  if (params.user?.role !== 'reception') return result;
+  // Reception needs an operational directory only. Keep clinical columns out of
+  // the response entirely instead of relying on the UI to hide them.
+  return {
+    ...result,
+    rows: result.rows.map(({ HighRiskFlag: _highRiskFlag, CurrentCase: _currentCase, ...operationalRow }) => operationalRow)
+  };
+};
 
 const create = async (body, req) => {
   const data = shape(body);
@@ -36,13 +45,25 @@ const create = async (body, req) => {
 };
 
 const getById = async (id, user) => {
+  if (!user || user.role === 'patient') throw new AppError('لا يمكن الوصول إلى ملف مريضة من هذا الحساب.', 403, 'PATIENT_PROFILE_ACCESS_DENIED');
   const patient = await repository.getById(id, user);
   if (!patient) throw new AppError('المريضة غير موجودة أو غير متاحة لهذا المستخدم.', 404, 'PATIENT_NOT_FOUND');
   if (user?.role === 'owner' || user?.role === 'doctor') {
     await recordAudit({ req: { user }, action: 'access_sensitive_record', entity: 'patient', entityId: id });
     return patient;
   }
-  return { ...patient, CurrentCaseId: null, CurrentCase: null, CurrentCaseStatus: null, LatestVisitId: null, LatestVisitDate: null, LatestDiagnosis: null, ActivePregnancyId: null, EDD: null, LMP: null, medications: [], allergies: [] };
+  await recordAudit({ req: { user }, action: 'access_operational_record', entity: 'patient', entityId: id });
+  const {
+    Id, PatientCode, FullName, DateOfBirth, Phone, AlternatePhone,
+    PreferredContactChannel, Address, AddressSource, Status, ProfileStatus,
+    RegistrationSource, CreatedAt, AssignedDoctorId, AssignedDoctor, appointments
+  } = patient;
+  return {
+    Id, PatientCode, FullName, DateOfBirth, Phone, AlternatePhone,
+    PreferredContactChannel, Address, AddressSource, Status, ProfileStatus,
+    RegistrationSource, CreatedAt, AssignedDoctorId, AssignedDoctor,
+    appointments: appointments || []
+  };
 };
 
 const update = async (id, body, req) => {

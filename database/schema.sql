@@ -148,6 +148,7 @@ BEGIN
     DoctorId INT NULL,
     PatientId INT NULL,
     IsActive BIT NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT 1,
+    SessionVersion INT NOT NULL CONSTRAINT DF_Users_SessionVersion DEFAULT 1,
     LastLoginAt DATETIME2(0) NULL,
     CreatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSUTCDATETIME(),
     UpdatedAt DATETIME2(0) NOT NULL CONSTRAINT DF_Users_UpdatedAt DEFAULT SYSUTCDATETIME(),
@@ -161,6 +162,12 @@ GO
 IF COL_LENGTH(N'dbo.Users', N'PatientId') IS NULL
 BEGIN
   ALTER TABLE dbo.Users ADD PatientId INT NULL;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'SessionVersion') IS NULL
+BEGIN
+  ALTER TABLE dbo.Users ADD SessionVersion INT NOT NULL CONSTRAINT DF_Users_SessionVersion DEFAULT 1;
 END;
 GO
 
@@ -781,6 +788,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Queue_DoctorStatusPos
   CREATE INDEX IX_Queue_DoctorStatusPosition ON dbo.QueueEntries (DoctorId, Status, Position) INCLUDE (PatientId, AppointmentId, ExpectedStartAt, ExpectedEndAt);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Queue_DoctorDatePosition' AND object_id = OBJECT_ID(N'dbo.QueueEntries'))
   CREATE INDEX IX_Queue_DoctorDatePosition ON dbo.QueueEntries (DoctorId, QueueDate, Position, Status) INCLUDE (PatientId, AppointmentId, ExpectedStartAt, ExpectedEndAt, ExpectedDurationMinutes);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_Queue_DoctorDateNumber' AND object_id = OBJECT_ID(N'dbo.QueueEntries'))
+  CREATE UNIQUE INDEX UX_Queue_DoctorDateNumber ON dbo.QueueEntries (DoctorId, QueueDate, QueueNumber) WHERE QueueDate IS NOT NULL;
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Visits_PatientDate' AND object_id = OBJECT_ID(N'dbo.Visits'))
   CREATE INDEX IX_Visits_PatientDate ON dbo.Visits (PatientId, CreatedAt DESC, Status);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Medications_PatientStatus' AND object_id = OBJECT_ID(N'dbo.Medications'))

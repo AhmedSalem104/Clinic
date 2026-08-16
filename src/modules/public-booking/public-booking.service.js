@@ -45,32 +45,40 @@ const createBooking = async (body, req) => {
   if (new Date(body.startAt).getTime() <= Date.now()) throw new AppError('اختاري موعدًا مستقبليًا.', 409, 'BOOKING_IN_PAST');
   const location = await resolveBookingLocation(body);
 
-  let confirmation = await withTransaction(async (transaction) => {
-    let patient = await bookingRepository.findPatientByPhoneInTransaction(transaction, normalizedPhone);
-    if (!patient) {
-      patient = await bookingRepository.createGuestPatientInTransaction(transaction, {
-        patientCode: bookingRepository.patientCode(),
-        fullName: body.fullName,
-        normalizedName: normalizeText(body.fullName),
-        dateOfBirth: body.dateOfBirth || null,
-        phone: String(body.phone).trim(),
-        normalizedPhone,
-        preferredContactChannel: body.preferredContactChannel || null,
-        ...(location || {})
+  let confirmation;
+  try {
+    confirmation = await withTransaction(async (transaction) => {
+      let patient = await bookingRepository.findPatientByPhoneInTransaction(transaction, normalizedPhone);
+      if (!patient) {
+        patient = await bookingRepository.createGuestPatientInTransaction(transaction, {
+          patientCode: bookingRepository.patientCode(),
+          fullName: body.fullName,
+          normalizedName: normalizeText(body.fullName),
+          dateOfBirth: body.dateOfBirth || null,
+          phone: String(body.phone).trim(),
+          normalizedPhone,
+          preferredContactChannel: body.preferredContactChannel || null,
+          ...(location || {})
+        });
+      } else if (location) await bookingRepository.updatePatientLocationInTransaction(transaction, patient.Id, location);
+      const appointment = await appointmentRepository.createInTransaction(transaction, {
+        patientId: patient.Id,
+        doctorId: body.doctorId,
+        serviceId: body.serviceId,
+        bookingSource: 'online',
+        startAt: body.startAt,
+        notes: null,
+        createdBy: null
       });
-    } else if (location) await bookingRepository.updatePatientLocationInTransaction(transaction, patient.Id, location);
-    const appointment = await appointmentRepository.createInTransaction(transaction, {
-      patientId: patient.Id,
-      doctorId: body.doctorId,
-      serviceId: body.serviceId,
-      bookingSource: 'online',
-      startAt: body.startAt,
-      notes: null,
-      createdBy: null
+      const result = await bookingRepository.confirmationInTransaction(transaction, appointment.Id);
+      return { ...result, location, primaryAssignmentCreated: Boolean(appointment.PrimaryAssignmentCreated) };
     });
-    const result = await bookingRepository.confirmationInTransaction(transaction, appointment.Id);
-    return { ...result, location, primaryAssignmentCreated: Boolean(appointment.PrimaryAssignmentCreated) };
-  });
+  } catch (error) {
+    if (error.number === 2601 || error.number === 2627) {
+      throw new AppError('الموعد لم يعد متاحًا. اختاري وقتًا آخر.', 409, 'DOUBLE_BOOKING');
+    }
+    throw error;
+  }
 
   if (!confirmation) throw new AppError('تعذر تأكيد الحجز.', 500, 'BOOKING_CONFIRMATION_FAILED');
   const appointment = await appointmentRepository.getById(confirmation.AppointmentId);

@@ -1,9 +1,9 @@
 const fs = require('node:fs');
-const path = require('node:path');
 const { ok, created } = require('../../utils/response');
 const service = require('../medical-records/medical.service');
 const { env } = require('../../config/env');
 const { AppError } = require('../../utils/errors');
+const { resolveLocalPath } = require('../../services/storage.service');
 
 const list = async (req, res) => { const patientId=Number(req.query.patientId); await service.withAccess(patientId,req.user,async()=>{}); return ok(res,await service.listDocuments(patientId)); };
 const upload = async (req, res) => {
@@ -15,5 +15,5 @@ const upload = async (req, res) => {
     return created(res,{id:document.Id,fileName:document.FileName,mimeType:document.MimeType,fileSizeBytes:document.FileSizeBytes,createdAt:document.CreatedAt});
   } catch(error) { try { fs.unlinkSync(req.file.path); } catch(_) {} throw error; }
 };
-const download = async (req,res) => { const document=await service.findDocument(Number(req.params.id)); if(!document) throw new AppError('المستند غير موجود.',404,'DOCUMENT_NOT_FOUND'); await service.withAccess(document.PatientId,req.user,async()=>{}); const absolute=path.resolve(document.StoragePath); if(!fs.existsSync(absolute)) throw new AppError('الملف غير موجود في التخزين.',404,'FILE_NOT_FOUND'); return res.download(absolute,document.FileName); };
+const download = async (req,res) => { const document=await service.findDocument(Number(req.params.id)); if(!document) throw new AppError('المستند غير موجود.',404,'DOCUMENT_NOT_FOUND'); await service.withAccess(document.PatientId,req.user,async()=>{}); const absolute=resolveLocalPath(document.StoragePath); if(!fs.existsSync(absolute)) throw new AppError('الملف غير موجود في التخزين.',404,'FILE_NOT_FOUND'); return res.download(absolute,document.FileName); };
 module.exports={list,upload,download};

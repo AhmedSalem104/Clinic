@@ -10,7 +10,8 @@ const signUser = (user) => jwt.sign({
   email: user.Email,
   role: user.Role,
   doctorId: user.DoctorId || null,
-  patientId: user.PatientId || null
+  patientId: user.PatientId || null,
+  sessionVersion: user.SessionVersion || 1
 }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 
 const login = async ({ email, password }) => {
@@ -28,4 +29,8 @@ const currentUser = async (id) => {
   return { id: user.Id, fullName: user.FullName, email: user.Email, role: user.Role, doctorId: user.DoctorId, patientId: user.PatientId };
 };
 
-module.exports = { login, currentUser, signUser };
+const logout = async (id) => {
+  if (id) await repository.rotateSession(id);
+};
+
+module.exports = { login, currentUser, logout, signUser };

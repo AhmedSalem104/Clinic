@@ -18,7 +18,8 @@ const login = async (req, res) => {
 
 const me = async (req, res) => ok(res, { user: await service.currentUser(req.user.id) });
 
-const logout = async (_req, res) => {
+const logout = async (req, res) => {
+  await service.logout(req.user?.id);
   res.clearCookie('clinic_access', { httpOnly: true, secure: env.cookieSecure, sameSite: 'lax', path: '/' });
   return ok(res, { loggedOut: true });
 };

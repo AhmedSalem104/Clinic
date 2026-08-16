@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { env } = require('../config/env');
 const { AppError } = require('../utils/errors');
 const { hasPermission, ROLES, PERMISSIONS } = require('../config/permissions');
+const authRepository = require('../modules/auth/auth.repository');
 
 const tokenFromRequest = (req) => {
   const cookieToken = req.cookies?.clinic_access;
@@ -10,14 +11,30 @@ const tokenFromRequest = (req) => {
   return header.startsWith('Bearer ') ? header.slice(7) : null;
 };
 
-const requireAuth = (req, _res, next) => {
+const requireAuth = async (req, _res, next) => {
   const token = tokenFromRequest(req);
   if (!token) return next(new AppError('يجب تسجيل الدخول أولًا.', 401, 'UNAUTHENTICATED'));
+  let decoded;
   try {
-    req.user = jwt.verify(token, env.jwtSecret);
+    decoded = jwt.verify(token, env.jwtSecret);
+  } catch (_) {
+    return next(new AppError('جلسة الدخول غير صالحة أو منتهية.', 401, 'INVALID_SESSION'));
+  }
+  try {
+    // Re-check the account on every protected request. This immediately blocks
+    // disabled accounts and invalidates tokens after role/password/session edits.
+    const current = await authRepository.findSessionState(decoded.id);
+    const identityMatches = current
+      && current.IsActive
+      && Number(current.SessionVersion || 1) === Number(decoded.sessionVersion == null ? 1 : decoded.sessionVersion)
+      && current.Role === decoded.role
+      && Number(current.DoctorId || 0) === Number(decoded.doctorId || 0)
+      && Number(current.PatientId || 0) === Number(decoded.patientId || 0);
+    if (!identityMatches) return next(new AppError('جلسة الدخول غير صالحة أو تم تحديث صلاحيات الحساب.', 401, 'INVALID_SESSION'));
+    req.user = decoded;
     return next();
   } catch (error) {
-    return next(new AppError('جلسة الدخول غير صالحة أو منتهية.', 401, 'INVALID_SESSION'));
+    return next(error);
   }
 };
 
