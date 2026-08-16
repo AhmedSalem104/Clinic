@@ -5,8 +5,8 @@ const { ok } = require('../../utils/response');
 const cookieOptions = () => ({
   httpOnly: true,
   secure: env.cookieSecure,
-  sameSite: 'lax',
-  maxAge: 8 * 60 * 60 * 1000,
+  sameSite: env.cookieSameSite,
+  maxAge: env.cookieMaxAgeMs,
   path: '/'
 });
 
@@ -20,7 +20,7 @@ const me = async (req, res) => ok(res, { user: await service.currentUser(req.use
 
 const logout = async (req, res) => {
   await service.logout(req.user?.id);
-  res.clearCookie('clinic_access', { httpOnly: true, secure: env.cookieSecure, sameSite: 'lax', path: '/' });
+  res.clearCookie('clinic_access', { httpOnly: true, secure: env.cookieSecure, sameSite: env.cookieSameSite, path: '/' });
   return ok(res, { loggedOut: true });
 };
 

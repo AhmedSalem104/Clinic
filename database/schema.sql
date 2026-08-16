@@ -800,3 +800,29 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Ultrasounds_PatientDa
   CREATE INDEX IX_Ultrasounds_PatientDate ON dbo.Ultrasounds (PatientId, StudyDate DESC);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AuditLogs_EntityDate' AND object_id = OBJECT_ID(N'dbo.AuditLogs'))
   CREATE INDEX IX_AuditLogs_EntityDate ON dbo.AuditLogs (Entity, EntityId, CreatedAt DESC);
+
+/* High-volume read paths: dashboard, availability, document and notification loading */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Appointments_StartStatusDoctor' AND object_id = OBJECT_ID(N'dbo.Appointments'))
+  CREATE INDEX IX_Appointments_StartStatusDoctor ON dbo.Appointments (StartAt, Status, DoctorId) INCLUDE (PatientId, ServiceId, EndAt, ExpectedDurationMinutes, Price);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DoctorServices_DoctorActive' AND object_id = OBJECT_ID(N'dbo.DoctorServices'))
+  CREATE INDEX IX_DoctorServices_DoctorActive ON dbo.DoctorServices (DoctorId, IsActive) INCLUDE (ServiceId);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DoctorSchedules_DoctorDayActive' AND object_id = OBJECT_ID(N'dbo.DoctorSchedules'))
+  CREATE INDEX IX_DoctorSchedules_DoctorDayActive ON dbo.DoctorSchedules (DoctorId, DayOfWeek, IsActive) INCLUDE (StartTime, EndTime, BreaksJson);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ScheduleExceptions_DoctorDate' AND object_id = OBJECT_ID(N'dbo.ScheduleExceptions'))
+  CREATE INDEX IX_ScheduleExceptions_DoctorDate ON dbo.ScheduleExceptions (DoctorId, ExceptionDate) INCLUDE (StartTime, EndTime, ExceptionType, Reason);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_DoctorPauses_DoctorStart' AND object_id = OBJECT_ID(N'dbo.DoctorPauses'))
+  CREATE INDEX IX_DoctorPauses_DoctorStart ON dbo.DoctorPauses (DoctorId, StartedAt) INCLUDE (ResumedAt, Status, Reason);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Documents_PatientArchiveDate' AND object_id = OBJECT_ID(N'dbo.Documents'))
+  CREATE INDEX IX_Documents_PatientArchiveDate ON dbo.Documents (PatientId, IsArchived, DocumentDate DESC) INCLUDE (CaseId, VisitId, DocumentType, FileName, MimeType, FileSizeBytes, UploadedBy, CreatedAt);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Notifications_UserCreated' AND object_id = OBJECT_ID(N'dbo.Notifications'))
+  CREATE INDEX IX_Notifications_UserCreated ON dbo.Notifications (UserId, CreatedAt DESC) INCLUDE (PatientId, AppointmentId, Channel, EventType, Status);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AuditLogs_CreatedAt' AND object_id = OBJECT_ID(N'dbo.AuditLogs'))
+  CREATE INDEX IX_AuditLogs_CreatedAt ON dbo.AuditLogs (CreatedAt DESC) INCLUDE (UserId, Action, Entity, EntityId, IpAddress);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_PatientAssignments_PatientActive' AND object_id = OBJECT_ID(N'dbo.PatientAssignments'))
+  CREATE INDEX IX_PatientAssignments_PatientActive ON dbo.PatientAssignments (PatientId, AssignmentType, EndedAt, AssignedAt DESC) INCLUDE (DoctorId, CaseId, AssignedBy);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_PatientAssignments_DoctorActive' AND object_id = OBJECT_ID(N'dbo.PatientAssignments'))
+  CREATE INDEX IX_PatientAssignments_DoctorActive ON dbo.PatientAssignments (DoctorId, EndedAt, PatientId, AssignmentType) INCLUDE (CaseId, AssignedAt);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_MedicalCases_PatientStatusStart' AND object_id = OBJECT_ID(N'dbo.MedicalCases'))
+  CREATE INDEX IX_MedicalCases_PatientStatusStart ON dbo.MedicalCases (PatientId, Status, StartDate DESC) INCLUDE (Type, EndDate, AssignedDoctorId);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Pregnancies_PatientStatusCreated' AND object_id = OBJECT_ID(N'dbo.Pregnancies'))
+  CREATE INDEX IX_Pregnancies_PatientStatusCreated ON dbo.Pregnancies (PatientId, Status, CreatedAt DESC) INCLUDE (EDD, LMP, AssignedDoctorId, CaseId);

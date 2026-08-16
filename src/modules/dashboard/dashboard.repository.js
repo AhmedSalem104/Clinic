@@ -8,15 +8,15 @@ const today = async (user, date) => {
     DECLARE @day date=@date;
 
     SELECT
-      (SELECT COUNT(1) FROM Appointments a WHERE CONVERT(date,a.StartAt)=@day ${appointmentScope}) TotalBookings,
+      (SELECT COUNT(1) FROM Appointments a WHERE a.StartAt>=CONVERT(datetime2,@day) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@day)) ${appointmentScope}) TotalBookings,
       (SELECT COUNT(1) FROM QueueEntries q JOIN Appointments qa ON qa.Id=q.AppointmentId WHERE COALESCE(q.QueueDate,CONVERT(date,qa.StartAt))=@day AND q.Status IN (N'arrived',N'waiting',N'late',N'in_consultation') ${queueScope}) ArrivedPatients,
       (SELECT COUNT(1) FROM QueueEntries q JOIN Appointments qa ON qa.Id=q.AppointmentId WHERE COALESCE(q.QueueDate,CONVERT(date,qa.StartAt))=@day AND q.Status IN (N'waiting',N'late') ${queueScope}) WaitingPatients,
       (SELECT COUNT(1) FROM QueueEntries q JOIN Appointments qa ON qa.Id=q.AppointmentId WHERE COALESCE(q.QueueDate,CONVERT(date,qa.StartAt))=@day AND q.Status=N'in_consultation' ${queueScope}) InConsultation,
-      (SELECT COUNT(1) FROM Appointments a WHERE CONVERT(date,a.StartAt)=@day AND a.Status=N'completed' ${appointmentScope}) Completed,
-      (SELECT COUNT(1) FROM Appointments a WHERE CONVERT(date,a.StartAt)=@day AND a.Status=N'no_show' ${appointmentScope}) NoShow,
+      (SELECT COUNT(1) FROM Appointments a WHERE a.StartAt>=CONVERT(datetime2,@day) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@day)) AND a.Status=N'completed' ${appointmentScope}) Completed,
+      (SELECT COUNT(1) FROM Appointments a WHERE a.StartAt>=CONVERT(datetime2,@day) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@day)) AND a.Status=N'no_show' ${appointmentScope}) NoShow,
       (SELECT COUNT(1) FROM Doctors d WHERE d.Status=N'active') ActiveDoctors,
       (SELECT COALESCE(AVG(CAST(DATEDIFF(MINUTE,q.CheckedInAt,q.ConsultationStartedAt) AS DECIMAL(10,2))),0) FROM QueueEntries q JOIN Appointments qa ON qa.Id=q.AppointmentId WHERE COALESCE(q.QueueDate,CONVERT(date,qa.StartAt))=@day AND q.CheckedInAt IS NOT NULL AND q.ConsultationStartedAt IS NOT NULL ${queueScope}) AverageWait,
-      (SELECT COUNT(1) FROM DoctorPauses dp WHERE CONVERT(date,dp.StartedAt)=@day ${user?.role === 'doctor' ? 'AND dp.DoctorId=@doctorId' : ''}) DoctorPauses;
+      (SELECT COUNT(1) FROM DoctorPauses dp WHERE dp.StartedAt>=CONVERT(datetime2,@day) AND dp.StartedAt<DATEADD(DAY,1,CONVERT(datetime2,@day)) ${user?.role === 'doctor' ? 'AND dp.DoctorId=@doctorId' : ''}) DoctorPauses;
 
     SELECT TOP 8
       a.Id,
@@ -37,7 +37,7 @@ const today = async (user, date) => {
     JOIN Doctors d ON d.Id=a.DoctorId
     JOIN Services s ON s.Id=a.ServiceId
     LEFT JOIN QueueEntries q ON q.AppointmentId=a.Id
-    WHERE CONVERT(date,a.StartAt)=@day ${appointmentScope}
+    WHERE a.StartAt>=CONVERT(datetime2,@day) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@day)) ${appointmentScope}
     ORDER BY a.StartAt;
 
     SELECT TOP 1

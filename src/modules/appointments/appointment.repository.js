@@ -50,13 +50,13 @@ const list = async ({ user, pageSize, offset, date, status, doctorId, serviceId,
     SELECT a.Id,a.PatientId,p.PatientCode,p.FullName PatientName,p.Phone,a.DoctorId,d.FullName DoctorName,a.ServiceId,s.Name ServiceName,
       a.BookingSource,a.StartAt,a.EndAt,a.ExpectedDurationMinutes,a.Price,a.Status,a.CreatedAt
     FROM Appointments a JOIN Patients p ON p.Id=a.PatientId JOIN Doctors d ON d.Id=a.DoctorId JOIN Services s ON s.Id=a.ServiceId
-    WHERE (@date IS NULL OR CONVERT(date,a.StartAt)=@date)
+    WHERE (@date IS NULL OR (a.StartAt>=CONVERT(datetime2,@date) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@date))))
       AND (@status=N'' OR a.Status=@status) AND (@doctorId IS NULL OR a.DoctorId=@doctorId) AND (@serviceId IS NULL OR a.ServiceId=@serviceId)
       AND (@search=N'' OR p.NormalizedName LIKE N'%'+@search+N'%' OR p.NormalizedPhone LIKE N'%'+@search+N'%' OR p.PatientCode LIKE N'%'+@search+N'%')
       ${doctorScope} ${patientScope}
     ORDER BY a.StartAt DESC OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
     SELECT COUNT_BIG(1) Total FROM Appointments a JOIN Patients p ON p.Id=a.PatientId
-    WHERE (@date IS NULL OR CONVERT(date,a.StartAt)=@date) AND (@status=N'' OR a.Status=@status) AND (@doctorId IS NULL OR a.DoctorId=@doctorId) AND (@serviceId IS NULL OR a.ServiceId=@serviceId)
+    WHERE (@date IS NULL OR (a.StartAt>=CONVERT(datetime2,@date) AND a.StartAt<DATEADD(DAY,1,CONVERT(datetime2,@date)))) AND (@status=N'' OR a.Status=@status) AND (@doctorId IS NULL OR a.DoctorId=@doctorId) AND (@serviceId IS NULL OR a.ServiceId=@serviceId)
       AND (@search=N'' OR p.NormalizedName LIKE N'%'+@search+N'%' OR p.NormalizedPhone LIKE N'%'+@search+N'%' OR p.PatientCode LIKE N'%'+@search+N'%') ${doctorScope} ${patientScope};
   `, (request) => request
     .input('date', sql.Date, date || null)
@@ -160,7 +160,7 @@ const availableSlots = async ({ doctorId, serviceId, date }) => {
     SELECT ExceptionDate,StartTime,EndTime,ExceptionType,Reason FROM ScheduleExceptions WHERE DoctorId=@doctorId AND ExceptionDate=@date;
     SELECT StartedAt,COALESCE(ResumedAt,DATEADD(DAY,1,CONVERT(datetime2,@date))) EndAt FROM DoctorPauses
     WHERE DoctorId=@doctorId AND StartedAt<DATEADD(DAY,1,CONVERT(datetime2,@date)) AND COALESCE(ResumedAt,DATEADD(DAY,1,CONVERT(datetime2,@date)))>CONVERT(datetime2,@date);
-    SELECT StartAt,ExpectedDurationMinutes FROM Appointments WHERE DoctorId=@doctorId AND CONVERT(date,StartAt)=@date AND Status NOT IN (N'cancelled',N'no_show');
+    SELECT StartAt,ExpectedDurationMinutes FROM Appointments WHERE DoctorId=@doctorId AND StartAt>=CONVERT(datetime2,@date) AND StartAt<DATEADD(DAY,1,CONVERT(datetime2,@date)) AND Status NOT IN (N'cancelled',N'no_show');
   `, (request) => request
     .input('doctorId', sql.Int, doctorId)
     .input('serviceId', sql.Int, serviceId)

@@ -14,7 +14,7 @@ const { apiRouter } = require('./routes');
 
 const app = express();
 
-app.set('trust proxy', 1);
+app.set('trust proxy', env.trustProxyHops);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -46,9 +46,17 @@ app.use(pinoHttp({
     err: (error) => ({ type: error.name, message: error.message, code: error.code, stack: env.nodeEnv === 'development' ? error.stack : undefined })
   }
 }));
-app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100, standardHeaders: true, legacyHeaders: false }));
-app.use('/api', rateLimit({ windowMs: 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false }));
+app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { success: false, error: { code: 'RATE_LIMITED', message: 'محاولات الدخول كثيرة. انتظر قليلًا ثم حاول مرة أخرى.' } } }));
+app.use('/api', rateLimit({ windowMs: 60 * 1000, limit: 450, standardHeaders: true, legacyHeaders: false, message: { success: false, error: { code: 'RATE_LIMITED', message: 'تم تجاوز عدد الطلبات المسموح به مؤقتًا. حاول بعد قليل.' } } }));
 app.use('/api', checkOrigin);
+
+// Medical and authenticated API responses must never be stored by an
+// intermediary or a shared browser cache. Public booking endpoints opt in to
+// short-lived caching at the controller level where it is safe.
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 app.get('/api/health', (_req, res) => res.json({ success: true, data: { status: 'ok', service: 'clinic' } }));
 app.use('/api', apiRouter);

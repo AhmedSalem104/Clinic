@@ -19,12 +19,18 @@ const renderPatientPicker = async (outlet, config, initialPatientId) => {
 
   const results = document.querySelector('#medical-patient-results');
   const search = document.querySelector('#medical-patient-search');
+  let loadSequence = 0;
   const loadData = async () => {
+    const sequence = ++loadSequence;
     const list = document.querySelector('#medical-list-wrap');
     if (!selected) { list.innerHTML = emptyState('اختاري مريضة لعرض السجلات.'); return; }
     list.innerHTML = '<div class="p-8"><div class="skeleton h-5 w-full mb-4"></div><div class="skeleton h-5 w-2/3"></div></div>';
-    try { list.innerHTML = config.table((await config.load(selected.Id)) || []); }
-    catch (error) { list.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; }
+    try {
+      const rows = (await config.load(selected.Id)) || [];
+      if (sequence !== loadSequence) return;
+      list.innerHTML = config.table(rows);
+    }
+    catch (error) { if (sequence !== loadSequence) return; list.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; }
   };
 
   search.addEventListener('input', debounce(async () => {

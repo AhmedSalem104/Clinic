@@ -1,6 +1,9 @@
 import { api } from '../core/api-service.js';
 export const patientService = {
-  list: (params = {}, options) => api.get(`/patients?${new URLSearchParams(params)}`, { ...options, requestKey: 'patient-search' }),
+  list: (params = {}, options = {}) => api.get(`/patients?${new URLSearchParams(params)}`, {
+    ...options,
+    requestKey: Object.hasOwn(options, 'requestKey') ? options.requestKey : 'patient-search'
+  }),
   get: (id) => api.get(`/patients/${id}`),
   create: (data) => api.post('/patients', data),
   update: (id, data) => api.patch(`/patients/${id}`, data),

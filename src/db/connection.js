@@ -14,6 +14,8 @@ const getPool = async () => {
     database: env.db.database,
     user: env.db.user,
     password: env.db.password,
+    connectionTimeout: env.db.connectionTimeoutMs,
+    requestTimeout: env.db.requestTimeoutMs,
     options: {
       encrypt: env.db.encrypt,
       trustServerCertificate: env.db.trustServerCertificate,
