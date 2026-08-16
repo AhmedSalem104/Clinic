@@ -15,7 +15,23 @@ const { apiRouter } = require('./routes');
 const app = express();
 
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'self'"],
+      formAction: ["'self'"],
+      scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.socket.io'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'", 'wss:'],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: ["'none'"]
+    }
+  }
+}));
 app.use(cors({ origin: env.appOrigin, credentials: true }));
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
