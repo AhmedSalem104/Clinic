@@ -2,6 +2,11 @@ const token = new URLSearchParams(window.location.search).get('token');
 const outlet = document.querySelector('#queue-status');
 const finishedStatuses = ['completed', 'no_show', 'cancelled', 'skipped'];
 const activeStatuses = ['booked', 'confirmed', 'arrived', 'waiting', 'late', 'in_consultation'];
+const query = new URLSearchParams(window.location.search);
+const requestedBackTarget = query.get('back');
+const backTarget = requestedBackTarget && requestedBackTarget.startsWith('/') && !requestedBackTarget.startsWith('//')
+  ? requestedBackTarget
+  : '/patient-booking.html';
 
 const format = (value, options = { dateStyle: 'medium', timeStyle: 'short' }) => value
   ? new Intl.DateTimeFormat('ar-EG', options).format(new Date(value))
@@ -29,6 +34,18 @@ const progressFor = (data) => {
   return { value: 32, label: 'في انتظار الدور' };
 };
 
+const configureBackLink = () => {
+  const backLink = document.querySelector('#queue-back');
+  if (!backLink) return;
+  backLink.href = backTarget;
+  backLink.addEventListener('click', (event) => {
+    if (!requestedBackTarget && document.referrer.startsWith(window.location.origin) && window.history.length > 1) {
+      event.preventDefault();
+      window.history.back();
+    }
+  });
+};
+
 const renderShell = () => {
   outlet.innerHTML = `
     <div class="queue-tracking-hero">
@@ -50,8 +67,14 @@ const renderShell = () => {
       <article class="queue-insight-card queue-ahead-card"><span class="queue-insight-icon">↓</span><div><small>أمامك الآن</small><strong id="queue-ahead" aria-live="polite">—</strong><em>مريضات</em></div></article>
       <article class="queue-insight-card"><span class="queue-insight-icon is-time">◷</span><div><small>الوقت المتوقع</small><strong id="queue-expected" class="queue-expected" aria-live="polite">سيُعاد الحساب</strong><em>نطاق تقريبي</em></div></article>
     </div>
+    <section class="queue-appointment-details" aria-label="تفاصيل الموعد">
+      <div class="queue-details-heading"><span>تفاصيل الحجز</span><strong id="queue-appointment-state">جاري تحميل الحالة</strong></div>
+      <div class="queue-details-grid"><div><small>الطبيب والخدمة</small><strong id="queue-appointment-service">—</strong></div><div><small>الموعد المحجوز</small><strong id="queue-appointment-time">—</strong></div></div>
+    </section>
+    <div class="queue-tracking-guidance"><span class="queue-guidance-icon">i</span><div><strong>كيف تتحرك المتابعة؟</strong><p>رقم دورك ثابت. عدد المريضات أمامك والوقت المتوقع يتغيران تلقائيًا كلما انتهى كشف أو حدث تحديث في العيادة.</p></div></div>
     <div id="queue-message" class="queue-message" aria-live="polite">سيتم تحديث الحالة تلقائيًا.</div>
     <div class="queue-update-line"><span class="queue-sync-dot"></span><span id="queue-updated">بانتظار أول تحديث</span></div>`;
+  configureBackLink();
 };
 
 const setStatus = (data, state) => {
@@ -71,7 +94,7 @@ const setProgress = (data) => {
   percent.textContent = `${progress.value}%`;
   label.textContent = progress.label;
   track.setAttribute('aria-valuenow', String(progress.value));
-  const stepStatus = data.status === 'completed' ? 'completed' : data.status === 'in_consultation' || Number(data.peopleAhead) === 0 ? 'current' : data.status === 'booked' || data.status === 'confirmed' ? 'booked' : 'waiting';
+  const stepStatus = data.status === 'completed' || finishedStatuses.includes(data.status) ? 'completed' : data.status === 'in_consultation' || Number(data.peopleAhead) === 0 ? 'current' : data.status === 'booked' || data.status === 'confirmed' ? 'booked' : 'waiting';
   const order = ['booked', 'waiting', 'current', 'completed'];
   const activeIndex = order.indexOf(stepStatus);
   document.querySelectorAll('[data-queue-step]').forEach((step) => {
@@ -84,14 +107,18 @@ const setProgress = (data) => {
 const renderData = (data) => {
   const state = displayStatus(data);
   const progress = progressFor(data);
+  const isFinished = finishedStatuses.includes(data.status);
   const signature = [data.status, data.peopleAhead, data.queueNumber, data.expectedStartAt, data.currentQueueNumber].join('|');
   const changed = outlet.dataset.queueSignature && outlet.dataset.queueSignature !== signature;
   outlet.dataset.queueSignature = signature;
   document.querySelector('#queue-service').textContent = `${data.doctorName || 'الطبيب'} · ${data.serviceName || 'الخدمة'}`;
   document.querySelector('#queue-number').textContent = data.queueNumber ?? '—';
-  document.querySelector('#queue-current-turn').textContent = data.currentQueueNumber ? `الدور الجاري الآن: #${data.currentQueueNumber}` : 'الدور الجاري الآن: سيظهر بعد تسجيل الوصول';
-  document.querySelector('#queue-ahead').textContent = Math.max(0, Number(data.peopleAhead || 0));
-  document.querySelector('#queue-expected').textContent = data.expectedStartAt ? `${format(data.expectedStartAt)} – ${format(data.expectedEndAt)}` : 'سيُعاد الحساب';
+  document.querySelector('#queue-current-turn').textContent = isFinished ? 'تم إغلاق متابعة هذا الدور' : data.currentQueueNumber ? `الدور الجاري الآن: #${data.currentQueueNumber}` : 'الدور الجاري الآن: سيظهر بعد تسجيل الوصول';
+  document.querySelector('#queue-ahead').textContent = isFinished ? '—' : Math.max(0, Number(data.peopleAhead || 0));
+  document.querySelector('#queue-expected').textContent = isFinished ? 'انتهت المتابعة' : data.expectedStartAt ? `${format(data.expectedStartAt)} – ${format(data.expectedEndAt)}` : 'سيُعاد الحساب';
+  document.querySelector('#queue-appointment-service').textContent = `${data.doctorName || 'الطبيب'} · ${data.serviceName || 'الخدمة'}`;
+  document.querySelector('#queue-appointment-time').textContent = data.appointmentTime ? format(data.appointmentTime) : 'سيُعاد الحساب';
+  document.querySelector('#queue-appointment-state').textContent = state.label;
   document.querySelector('#queue-message').textContent = state.message;
   setStatus(data, state);
   setProgress(data);
@@ -111,11 +138,12 @@ const showError = (message) => {
   status.textContent = 'تعذر تحديث الاتصال';
   status.className = 'queue-status-badge is-error';
   const messageBox = document.querySelector('#queue-message');
-  if (messageBox) messageBox.textContent = `${message} ستتم إعادة المحاولة تلقائيًا.`;
+  const arabicMessage = /[\u0600-\u06FF]/.test(String(message || '')) ? message : 'تعذر الاتصال بخدمة متابعة الدور الآن.';
+  if (messageBox) messageBox.textContent = `${arabicMessage} ستتم إعادة المحاولة تلقائيًا.`;
 };
 
 if (!token) {
-  outlet.innerHTML = '<div class="queue-error-state"><strong>رابط متابعة الدور غير صالح</strong><span>اطلبي رابط متابعة جديدًا من رسالة الحجز أو الاستقبال.</span></div>';
+  outlet.innerHTML = '<div class="queue-error-state"><strong>رابط متابعة الدور غير صالح</strong><span>اطلبي رابط متابعة جديدًا من رسالة الحجز أو الاستقبال.</span><a class="queue-error-back" href="/patient-booking.html">العودة إلى صفحة الحجز</a></div>';
 } else {
   renderShell();
   let activeRequest;

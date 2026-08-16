@@ -6,15 +6,15 @@
   <title>متابعة الدور | عيادتي</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/tailwind.css">
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/tailwind.css?v=20260816-queue-flow2">
+  <link rel="stylesheet" href="/css/app.css?v=20260816-queue-flow2">
 </head>
 <body class="queue-tracking-page">
   <main class="queue-tracking-shell">
     <section class="queue-tracking-card" aria-labelledby="queue-page-title">
       <header class="queue-tracking-header">
         <a class="queue-brand" href="/" aria-label="العودة إلى عيادتي"><span class="queue-brand-mark">+</span><span><strong>عيادتي</strong><small>متابعة الدور</small></span></a>
-        <span class="queue-live-chip"><i aria-hidden="true"></i> تحديث حي</span>
+        <div class="queue-header-actions"><a id="queue-back" class="queue-back-button" href="/patient-booking.html"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span>العودة إلى الحجز</span></a><span class="queue-live-chip"><i aria-hidden="true"></i> تحديث حي</span></div>
       </header>
       <div id="queue-status" class="queue-tracking-content">
         <div class="queue-loading-state"><span class="queue-loading-orbit" aria-hidden="true"></span><strong id="queue-page-title">جاري تحميل حالة الدور</strong><span>يتم جلب آخر تحديث من العيادة…</span></div>
@@ -23,6 +23,6 @@
     </section>
   </main>
   <script defer src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-  <script type="module" src="/js/public-queue.js?v=20260816-queue-ui1"></script>
+  <script type="module" src="/js/public-queue.js?v=20260816-queue-flow2"></script>
 </body>
 </html>

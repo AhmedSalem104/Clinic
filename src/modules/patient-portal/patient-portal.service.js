@@ -27,15 +27,15 @@ const register = async (body, req) => {
     await recordAudit({ req, action: 'patient_self_register', entity: 'patient', entityId: result.patient.Id, newValue: { patientId: result.patient.Id, userId: result.user.Id } });
     return { patientId: result.patient.Id, patientCode: result.patient.PatientCode, email: result.user.Email, linkedExistingPatient: result.linkedExistingPatient };
   } catch (error) {
-    if (error.number === 2601 || error.number === 2627) throw new AppError('This email or patient account is already registered.', 409, 'REGISTRATION_EXISTS');
+    if (error.number === 2601 || error.number === 2627) throw new AppError('هذا البريد الإلكتروني أو حساب المريضة مستخدم بالفعل.', 409, 'REGISTRATION_EXISTS');
     throw error;
   }
 };
 
 const getSummary = async (req) => {
-  if (!req.user?.patientId) throw new AppError('This account is not linked to a patient record.', 403, 'PATIENT_ACCOUNT_UNLINKED');
+  if (!req.user?.patientId) throw new AppError('هذا الحساب غير مرتبط بملف مريضة.', 403, 'PATIENT_ACCOUNT_UNLINKED');
   const result = await repository.summary(req.user.patientId);
-  if (!result.patient) throw new AppError('The patient record is not available.', 404, 'PATIENT_NOT_FOUND');
+  if (!result.patient) throw new AppError('ملف المريضة غير متاح حاليًا.', 404, 'PATIENT_NOT_FOUND');
   return result;
 };
 

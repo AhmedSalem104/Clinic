@@ -18,7 +18,7 @@ const registrationSchema = z.object({
   consent: z.literal(true)
 }).superRefine((value, context) => {
   if (value.password !== value.confirmPassword) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['confirmPassword'], message: 'Passwords do not match.' });
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['confirmPassword'], message: 'كلمتا المرور غير متطابقتين.' });
   }
 });
 

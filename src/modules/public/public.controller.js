@@ -6,9 +6,9 @@ const queue = async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
   const token = String(req.params.token || '').trim();
-  if (!/^[a-f0-9]{48}$/i.test(token)) throw new AppError('Queue tracking link is invalid.', 404, 'TRACKING_NOT_FOUND');
+  if (!/^[a-f0-9]{48}$/i.test(token)) throw new AppError('رابط متابعة الدور غير صالح.', 404, 'TRACKING_NOT_FOUND');
   const row = await repository.queueByToken(token);
-  if (!row) throw new AppError('Queue tracking link is invalid or expired.', 404, 'TRACKING_NOT_FOUND');
+  if (!row) throw new AppError('رابط متابعة الدور غير صالح أو انتهت صلاحيته.', 404, 'TRACKING_NOT_FOUND');
   return ok(res, { queueNumber: row.QueueNumber, status: row.Status, peopleAhead: Math.max(0, Number(row.PeopleAhead || 0)), currentQueueNumber: row.CurrentQueueNumber || null, currentQueueStatus: row.CurrentQueueStatus || null, expectedStartAt: row.ExpectedStartAt, expectedEndAt: row.ExpectedEndAt, appointmentTime: row.AppointmentTime, doctorName: row.DoctorName, serviceName: row.ServiceName });
 };
 

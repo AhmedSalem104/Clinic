@@ -47,7 +47,20 @@ const renderTopbar = (user) => {
 };
 
 const renderLogin = () => {
-  const showStaff = new URLSearchParams(window.location.search).get('staff') === '1';
+  const loginQuery = new URLSearchParams(window.location.search);
+  const showStaff = loginQuery.get('staff') === '1';
+  const showPatient = loginQuery.get('patient') === '1';
+  const loginMode = showPatient ? {
+    label: 'حساب المريضة',
+    title: 'دخول لمتابعة مواعيدك',
+    help: 'استخدمي البريد الإلكتروني وكلمة المرور لمتابعة مواعيدك ورقم دورك.',
+    button: 'دخول إلى مواعيدي'
+  } : {
+    label: 'بوابة الفريق',
+    title: 'تسجيل دخول العيادة',
+    help: 'للاستقبال والمالك والطبيب باستخدام بيانات الحساب الخاصة بالعيادة.',
+    button: 'دخول إلى النظام'
+  };
   loginView.innerHTML = `<section class="gateway">
     <div class="gateway-backdrop" aria-hidden="true"></div>
     <div class="gateway-content">
@@ -63,8 +76,8 @@ const renderLogin = () => {
           </div>
           <div class="gateway-steps"><div><b>01</b><span>اختاري الموعد</span></div><div><b>02</b><span>احفظي رقم الحجز</span></div><div><b>03</b><span>تابعي دورك</span></div></div>
         </div>
-        <section id="staff-entry-card" class="gateway-staff-entry ${showStaff ? 'hidden' : ''}"><div class="gateway-staff-icon">${icon('users')}</div><span class="gateway-card-label">للعاملين في العيادة</span><h2>دخول الريسبشن والمالك</h2><p>إدارة الحجوزات والطابور والمرضى والصلاحيات من بوابة فريق العيادة.</p><button id="open-staff-login" class="gateway-staff-button" type="button">دخول فريق العيادة ${icon('arrow')}</button></section>
-        <section id="staff-login-card" class="gateway-login-card ${showStaff ? '' : 'hidden'}"><button id="back-to-patient" class="gateway-back-link" type="button">${icon('arrow')} العودة إلى حجز المريضة</button><div class="gateway-login-heading"><span class="gateway-staff-icon">${icon('shield')}</span><div><span class="gateway-card-label">بوابة الفريق</span><h2>تسجيل دخول العيادة</h2></div></div><p class="gateway-login-help">للاستقبال والمالك والطبيب باستخدام بيانات الحساب الخاصة بالعيادة.</p><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="owner@clinic.local" required /></div><div><label class="form-label" for="login-password">كلمة المرور</label><input class="input" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="gateway-login-button" type="submit">دخول إلى النظام ${icon('arrow')}</button></form></section>
+        <section id="staff-entry-card" class="gateway-staff-entry ${showStaff || showPatient ? 'hidden' : ''}"><div class="gateway-staff-icon">${icon('users')}</div><span class="gateway-card-label">للعاملين في العيادة</span><h2>دخول الريسبشن والمالك</h2><p>إدارة الحجوزات والطابور والمرضى والصلاحيات من بوابة فريق العيادة.</p><button id="open-staff-login" class="gateway-staff-button" type="button">دخول فريق العيادة ${icon('arrow')}</button></section>
+        <section id="staff-login-card" class="gateway-login-card ${showStaff || showPatient ? '' : 'hidden'}"><button id="back-to-patient" class="gateway-back-link" type="button">${icon('arrow')} العودة إلى حجز المريضة</button><div class="gateway-login-heading"><span class="gateway-staff-icon">${icon(showPatient ? 'users' : 'shield')}</span><div><span class="gateway-card-label">${loginMode.label}</span><h2>${loginMode.title}</h2></div></div><p class="gateway-login-help">${loginMode.help}</p><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="name@example.com" required /></div><div><label class="form-label" for="login-password">كلمة المرور</label><input class="input" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="gateway-login-button" type="submit">${loginMode.button} ${icon('arrow')}</button></form></section>
       </div>
       <footer class="gateway-footer"><span>الحجز الأول لا يحتاج تسجيل دخول.</span><span>عند الوصول، يستكمل الريسبشن بيانات الملف الطبي.</span></footer>
     </div>
@@ -88,7 +101,7 @@ const renderLogin = () => {
     catch (error) { errorBox.textContent = error.message || 'تعذر تسجيل الدخول.'; errorBox.classList.remove('hidden'); }
     finally { button.disabled = false; button.innerHTML = `دخول إلى النظام ${icon('arrow')}`; }
   });
-  if (showStaff) document.querySelector('#login-email')?.focus();
+  if (showStaff || showPatient) document.querySelector('#login-email')?.focus();
 };
 
 let router;

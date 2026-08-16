@@ -34,6 +34,7 @@ const summaryTime = document.querySelector('#summary-time');
 const summaryPrice = document.querySelector('#summary-price');
 const progressSteps = [...document.querySelectorAll('[data-booking-step]')];
 const progressLines = [...document.querySelectorAll('.booking-progress > i')];
+const sectionStates = [...document.querySelectorAll('[data-section-state]')];
 
 let slotRequestId = 0;
 let doctorOptionsRequestId = 0;
@@ -162,6 +163,16 @@ const updateProgress = () => {
     step.classList.toggle('is-complete', (number === 1 && basicComplete && activeStep > 1) || (number === 2 && appointmentComplete && activeStep > 2));
   });
   progressLines.forEach((line, index) => line.classList.toggle('is-complete', index === 0 ? basicComplete : appointmentComplete));
+  const sectionLabels = {
+    1: basicComplete ? 'تمت البيانات' : 'ابدئي هنا',
+    2: appointmentComplete ? 'تم اختيار الموعد' : basicComplete ? 'اختاري الآن' : 'بعد بياناتك',
+    3: timeComplete ? 'جاهز للتأكيد' : appointmentComplete ? 'اختاري الوقت' : 'الخطوة الأخيرة'
+  };
+  sectionStates.forEach((state) => {
+    const number = Number(state.dataset.sectionState);
+    state.textContent = sectionLabels[number] || '';
+    state.classList.toggle('is-complete', (number === 1 && basicComplete) || (number === 2 && appointmentComplete) || (number === 3 && timeComplete));
+  });
 };
 
 const setPrice = (value) => {
@@ -172,11 +183,11 @@ const setPrice = (value) => {
 
 const renderConfirmation = (booking) => {
   const trackingUrl = booking.publicTrackingToken && booking.requiresQueue ? `/queue-tracking.html?token=${encodeURIComponent(booking.publicTrackingToken)}` : '';
-  const accountUrl = `/patient-register.html?patientCode=${encodeURIComponent(booking.patientCode)}`;
+  const accountUrl = `/patient-register.html?patientCode=${encodeURIComponent(booking.patientCode)}&from=booking&returnTo=${encodeURIComponent('/patient-booking.html')}`;
   document.querySelector('#booking-shell').classList.add('hidden');
   const confirmation = document.querySelector('#booking-confirmation');
   confirmation.className = 'booking-confirmation-card';
-  confirmation.innerHTML = `<div class="booking-confirmation-head"><div class="booking-confirmation-check" aria-hidden="true">✓</div><h1>تم تأكيد حجزك بنجاح</h1><p>احتفظي بهذه البيانات وأظهريها لفريق الاستقبال عند الوصول إلى العيادة.</p></div><div class="booking-confirmation-grid"><div class="booking-confirmation-item is-blue"><span>معرّف المريضة</span><strong dir="ltr">${escapeHtml(booking.patientCode)}</strong></div><div class="booking-confirmation-item is-blue"><span>رقم الحجز</span><strong dir="ltr">#${escapeHtml(booking.appointmentId)}</strong></div>${booking.queueNumber ? `<div class="booking-confirmation-item"><span>رقم الدور</span><strong>#${escapeHtml(booking.queueNumber)}</strong></div>` : ''}<div class="booking-confirmation-item"><span>السعر</span><strong>${formatMoney(booking.price)}</strong></div><div class="booking-confirmation-item is-wide"><span>تفاصيل الموعد</span><strong>${escapeHtml(booking.doctorName)} · ${escapeHtml(booking.serviceName)}</strong><span>${escapeHtml(formatDateTime(booking.startAt))}</span></div></div><div class="booking-confirmation-actions">${trackingUrl ? `<a class="booking-confirmation-primary" href="${trackingUrl}">متابعة الدور والوقت المتوقع</a>` : ''}<a class="booking-confirmation-secondary" href="${accountUrl}">إنشاء حساب لاحقًا</a><a class="booking-confirmation-ghost" href="/patient-booking.html">حجز موعد آخر</a></div>`;
+  confirmation.innerHTML = `<div class="booking-confirmation-head"><div class="booking-confirmation-check" aria-hidden="true">✓</div><span class="booking-confirmation-kicker">تم الحجز بنجاح</span><h1>موعدك مؤكد</h1><p>احتفظي برقم الحجز ومعرّف المريضة، وأظهريهما لفريق الاستقبال عند الوصول إلى العيادة.</p></div><div class="booking-confirmation-grid"><div class="booking-confirmation-item is-blue"><span>معرّف المريضة</span><strong dir="ltr">${escapeHtml(booking.patientCode)}</strong></div><div class="booking-confirmation-item is-blue"><span>رقم الحجز</span><strong dir="ltr">#${escapeHtml(booking.appointmentId)}</strong></div>${booking.queueNumber ? `<div class="booking-confirmation-item is-highlight"><span>رقم الدور الثابت</span><strong>#${escapeHtml(booking.queueNumber)}</strong></div>` : ''}<div class="booking-confirmation-item"><span>السعر المتوقع</span><strong>${formatMoney(booking.price)}</strong></div><div class="booking-confirmation-item is-wide"><span>تفاصيل الزيارة</span><strong>${escapeHtml(booking.doctorName)} · ${escapeHtml(booking.serviceName)}</strong><span>${escapeHtml(formatDateTime(booking.startAt))}</span></div></div><section class="booking-confirmation-next" aria-label="الخطوة التالية بعد الحجز"><div class="booking-confirmation-next-heading"><span>الخطوة التالية</span><strong>اختاري ما تريدين فعله الآن</strong></div><div class="booking-confirmation-actions">${trackingUrl ? `<a class="booking-confirmation-primary" href="${trackingUrl}"><span>متابعة الدور الآن</span><small>رقم الدور والوقت المتوقع يتحدثان تلقائيًا</small></a>` : ''}<a class="booking-confirmation-secondary" href="${accountUrl}"><span>إنشاء حساب للمريضة</span><small>لرؤية مواعيدك ومتابعة الدور لاحقًا</small></a><a class="booking-confirmation-ghost" href="/patient-booking.html"><span>العودة إلى صفحة الحجز</span><small>لحجز موعد آخر</small></a></div></section>`;
   if (booking.address) {
     const addressItem = document.createElement('div');
     addressItem.className = 'booking-confirmation-item is-wide';

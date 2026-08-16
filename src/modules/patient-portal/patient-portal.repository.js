@@ -9,7 +9,7 @@ const register = async (data) => withTransaction(async (transaction) => {
   const emailResult = await transaction.request()
     .input('email', sql.NVarChar(255), data.email)
     .query('SELECT TOP 1 Id FROM Users WITH (UPDLOCK,HOLDLOCK) WHERE Email=@email');
-  if (emailResult.recordset[0]) throw new AppError('This email is already registered.', 409, 'EMAIL_EXISTS');
+  if (emailResult.recordset[0]) throw new AppError('هذا البريد الإلكتروني مستخدم بالفعل. اختاري بريدًا آخر.', 409, 'EMAIL_EXISTS');
 
   let patient;
   let linkedExistingPatient = false;
@@ -18,10 +18,10 @@ const register = async (data) => withTransaction(async (transaction) => {
       .input('patientCode', sql.NVarChar(30), data.patientCode)
       .query(`SELECT TOP 1 Id,PatientCode,FullName,Phone,NormalizedPhone,DateOfBirth,ProfileStatus FROM Patients WITH (UPDLOCK,HOLDLOCK) WHERE PatientCode=@patientCode AND Status=N'active'`);
     const existing = existingResult.recordset[0];
-    if (!existing) throw new AppError('Patient ID غير موجود. راجعي الرقم الموجود في تأكيد الحجز.', 404, 'PATIENT_CLAIM_NOT_FOUND');
-    if (existing.NormalizedPhone !== data.normalizedPhone) throw new AppError('رقم الهاتف لا يطابق Patient ID.', 409, 'PATIENT_CLAIM_MISMATCH');
+    if (!existing) throw new AppError('معرّف المريضة غير موجود. راجعي الرقم الموجود في تأكيد الحجز.', 404, 'PATIENT_CLAIM_NOT_FOUND');
+    if (existing.NormalizedPhone !== data.normalizedPhone) throw new AppError('رقم الهاتف لا يطابق معرّف المريضة. استخدمي نفس الرقم الذي تم به الحجز.', 409, 'PATIENT_CLAIM_MISMATCH');
     const linkedUser = await transaction.request().input('patientId', sql.Int, existing.Id).query(`SELECT TOP 1 Id FROM Users WITH (UPDLOCK,HOLDLOCK) WHERE PatientId=@patientId AND Role=N'patient'`);
-    if (linkedUser.recordset[0]) throw new AppError('يوجد حساب مرتبط بهذا Patient ID بالفعل.', 409, 'PATIENT_ACCOUNT_EXISTS');
+    if (linkedUser.recordset[0]) throw new AppError('يوجد حساب مرتبط بهذا المعرّف بالفعل. انتقلي إلى تسجيل الدخول.', 409, 'PATIENT_ACCOUNT_EXISTS');
     await transaction.request()
       .input('id', sql.Int, existing.Id)
       .input('fullName', sql.NVarChar(180), data.fullName)
@@ -46,7 +46,7 @@ const register = async (data) => withTransaction(async (transaction) => {
            OR (@dateOfBirth IS NOT NULL AND NormalizedName=@normalizedName AND DateOfBirth=@dateOfBirth)
       `);
     if (duplicateResult.recordset[0]) {
-      throw new AppError('هذا الهاتف مرتبط بسجل موجود. استخدمي Patient ID من الحجز لإنشاء الحساب.', 409, 'PATIENT_EXISTS');
+      throw new AppError('هذا الهاتف مرتبط بسجل موجود. استخدمي معرّف المريضة من الحجز لإنشاء الحساب.', 409, 'PATIENT_EXISTS');
     }
 
     const patientResult = await transaction.request()
