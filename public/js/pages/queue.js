@@ -1,5 +1,6 @@
 import { api } from '../core/api-service.js';
 import { clinicService } from '../services/clinic-service.js';
+import { auth } from '../core/auth.js';
 import { escapeHtml, formatDateTime, statusBadge, emptyState, toast, confirm, localDateKey, icon, startPolling } from '../core/ui.js';
 
 const activeStatuses = ['booked', 'confirmed', 'arrived', 'waiting', 'late', 'in_consultation'];
@@ -42,34 +43,52 @@ const statusChoices = [
   ['skipped', 'تجاوز الدور', 'queue-action-skip']
 ];
 
-const queueActions = (row) => {
+const primaryActionFor = (row) => {
+  if (['booked', 'confirmed'].includes(row.Status)) return ['arrived', 'تسجيل الوصول'];
+  if (['arrived', 'waiting', 'late'].includes(row.Status)) return ['in_consultation', 'بدء الكشف'];
+  if (row.Status === 'in_consultation') return ['completed', 'إنهاء الكشف'];
+  return null;
+};
+
+const queueActions = (row, user) => {
   const ended = isQueueEnded(row);
   if (ended) {
     const label = row.Status === 'completed' ? 'اكتمل الكشف' : finishedStatuses.includes(row.Status) ? 'أُغلق هذا الدور' : 'انتهى الوقت المتوقع';
     return `<div class="queue-action-closed" aria-label="${label}"><strong>${label}</strong><small>للعرض فقط · لا توجد إجراءات نشطة</small></div>`;
   }
-  const canMove = activeStatuses.includes(row.Status);
   const transitions = allowedTransitions[row.Status] || [];
-  const actions = statusChoices
-    .filter(([nextStatus]) => transitions.includes(nextStatus))
+  const primary = primaryActionFor(row);
+  const primaryMarkup = primary && transitions.includes(primary[0])
+    ? `<button type="button" class="queue-primary-action" data-status-id="${row.Id}" data-status="${primary[0]}" data-patient-id="${row.PatientId}">${icon(primary[0] === 'completed' ? 'save' : primary[0] === 'in_consultation' ? 'medical' : 'users')}<span>${primary[1]}</span></button>`
+    : '';
+  const secondaryActions = statusChoices
+    .filter(([nextStatus]) => transitions.includes(nextStatus) && nextStatus !== primary?.[0])
     .map(([nextStatus, label, className]) => `<button type="button" class="queue-action-button ${className}" data-status-id="${row.Id}" data-status="${nextStatus}">${label}</button>`)
     .join('');
-  if (!canMove && !actions) return '<span class="queue-action-closed">لا توجد إجراءات</span>';
+  const medicalLink = ['owner', 'doctor'].includes(user?.role) && row.PatientId
+    ? `<a class="queue-open-visit" href="/visits?patientId=${row.PatientId}&start=1" data-route="/visits?patientId=${row.PatientId}&start=1">${icon('medical')} فتح الزيارة</a>`
+    : '';
+  const more = `<details class="queue-more"><summary>إجراءات أخرى</summary><div class="queue-more-list">${medicalLink}${secondaryActions || '<span>لا توجد إجراءات إضافية</span>'}</div></details>`;
   return `<div class="queue-action-panel">
-    <div class="queue-action-cluster"><span>ترتيب الدور</span><div class="queue-action-buttons">${canMove ? `<button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Math.max(1, Number(row.Position) - 1)}" ${Number(row.Position) <= 1 ? 'disabled' : ''} aria-label="تحريك لأعلى" title="تحريك لأعلى">↑</button><button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Number(row.Position) + 1}" aria-label="تحريك لأسفل" title="تحريك لأسفل">↓</button>` : '<small>—</small>'}</div></div>
-    <div class="queue-action-cluster queue-status-cluster"><span>تحديث الحالة</span><div class="queue-action-buttons">${actions || '<small>—</small>'}</div></div>
+    ${primaryMarkup}
+    <div class="queue-action-secondary"><button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Math.max(1, Number(row.Position) - 1)}" ${Number(row.Position) <= 1 ? 'disabled' : ''} aria-label="تحريك لأعلى" title="تحريك لأعلى">↑</button><button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Number(row.Position) + 1}" aria-label="تحريك لأسفل" title="تحريك لأسفل">↓</button>${more}</div>
   </div>`;
 };
 
 export async function render(outlet) {
+  const currentUser = auth.user();
   const doctors = await clinicService.doctors({ page: 1, pageSize: 100 });
   const today = localDateKey();
-  outlet.innerHTML = `<div class="section-heading"><div><h1>${icon('clock')} إدارة الطابور</h1><p>تسجيل الوصول وإعادة الترتيب والتجاوز وإيقاف طابور الطبيب واستئنافه.</p></div><div class="flex gap-2"><button id="pause-doctor" class="btn btn-secondary">${icon('pause')} إيقاف الطبيب</button><a class="btn btn-primary" href="/appointments/new?source=walk_in" data-route="/appointments/new">${icon('plus')} إضافة مريضة بدون موعد</a></div></div><section class="card"><div class="filter-bar border-b border-slate-100 p-4"><select id="queue-doctor" class="select w-auto"><option value="">اختاري الطبيب</option>${(doctors.data || []).map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)}</option>`).join('')}</select><input id="queue-date" class="input w-auto" type="date" value="${today}" /><span id="queue-state" class="text-xs text-slate-500">اختاري طبيبًا لعرض الطابور.</span></div><div id="queue-table" class="table-wrap p-1">${emptyState('لم يتم اختيار طبيب.')}</div></section>`;
+  outlet.innerHTML = `<div class="section-heading"><div><h1>${icon('clock')} إدارة الطابور</h1><p>إجراء واحد واضح لكل دور: تسجيل وصول، بدء الكشف، ثم إنهاؤه.</p></div><div class="flex gap-2"><button id="pause-doctor" class="btn btn-secondary">${icon('pause')} إيقاف الطبيب</button><a class="btn btn-primary" href="/appointments/new?source=walk_in" data-route="/appointments/new">${icon('plus')} إضافة حضور</a></div></div><section class="card"><div class="filter-bar border-b border-slate-100 p-4"><select id="queue-doctor" class="select w-auto"><option value="">اختاري الطبيب</option>${(doctors.data || []).map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)}</option>`).join('')}</select><input id="queue-date" class="input w-auto" type="date" value="${today}" /><span id="queue-state" class="text-xs text-slate-500">اختاري الطبيب مرة واحدة لعرض طابوره.</span></div><div id="queue-table" class="table-wrap p-1">${emptyState('لم يتم اختيار طبيب.')}</div></section>`;
 
   const doctorSelect = document.querySelector('#queue-doctor');
   const dateInput = document.querySelector('#queue-date');
   const table = document.querySelector('#queue-table');
   const state = document.querySelector('#queue-state');
+  let rememberedDoctor = '';
+  try { rememberedDoctor = sessionStorage.getItem('clinic.queueDoctorId') || ''; } catch (_) { /* session storage is optional */ }
+  const preferredDoctor = currentUser?.role === 'doctor' ? String(currentUser.doctorId || '') : rememberedDoctor;
+  if (preferredDoctor && [...doctorSelect.options].some((option) => option.value === preferredDoctor)) doctorSelect.value = preferredDoctor;
 
   const load = async () => {
     const doctorId = doctorSelect.value;
@@ -81,27 +100,38 @@ export async function render(outlet) {
       const waitingCount = rows.filter((row) => ['waiting', 'late'].includes(row.Status) && !isQueueEnded(row)).length;
       state.innerHTML = `${waitingCount} في الانتظار · ${result.pause ? `آخر توقف: ${statusBadge(result.pause.Status)}` : 'لا يوجد توقف مسجل'}`;
       const firstActiveId = rows.find((row) => activeStatuses.includes(row.Status) && !isQueueEnded(row))?.Id;
-      const tableMarkup = rows.length ? `<div class="queue-board-wrap">${queueBoard(rows)}</div><table class="data-table"><thead><tr><th>#</th><th>المريضة</th><th>الخدمة</th><th>الموعد</th><th>الوقت المتوقع</th><th>الانتظار</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>${rows.map((row) => {
+      const tableMarkup = rows.length ? `<div class="queue-board-wrap">${queueBoard(rows)}</div><table class="data-table"><thead><tr><th>#</th><th>المريضة</th><th>الخدمة</th><th>الموعد</th><th>الوقت المتوقع</th><th>الانتظار</th><th>الحالة</th><th>الإجراء التالي</th></tr></thead><tbody>${rows.map((row) => {
         const isCurrent = row.Status === 'in_consultation';
         const ended = isQueueEnded(row);
         const isNext = !isCurrent && !ended && row.Id === firstActiveId;
         const rowClass = isCurrent ? 'queue-current-row' : isNext ? 'queue-next-row' : ended ? 'queue-finished-row' : '';
         const rowHint = isCurrent ? '<small class="queue-row-hint">يُكشف الآن</small>' : isNext ? '<small class="queue-row-hint">التالي</small>' : ended ? '<small class="queue-row-hint is-muted">للعرض فقط</small>' : '';
         const expectedTime = row.ExpectedStartAt ? `${formatDateTime(row.ExpectedStartAt)} – ${row.ExpectedEndAt ? formatDateTime(row.ExpectedEndAt) : '—'}` : 'جارٍ إعادة الحساب';
-        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ended ? 'is-ended' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${rowHint}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${expectedTime}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td>${queueActions(row)}</td></tr>`;
+        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ended ? 'is-ended' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${rowHint}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${expectedTime}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td>${queueActions(row, currentUser)}</td></tr>`;
       }).join('')}</tbody></table>` : emptyState('لا توجد مريضات في طابور هذا الطبيب وهذا التاريخ.');
       table.innerHTML = tableMarkup;
       table.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
       table.querySelectorAll('[data-status-id]').forEach((button) => button.addEventListener('click', async () => {
         const nextStatus = button.dataset.status;
         if (['no_show', 'skipped'].includes(nextStatus) && !(await confirm('تحديث عنصر الطابور؟', 'سيتم تسجيل هذا الإجراء في سجل التدقيق.', nextStatus === 'no_show' ? 'تسجيل عدم الحضور' : 'تأكيد'))) return;
-        try { await api.patch(`/queue/${button.dataset.statusId}/status`, { status: nextStatus }); toast('تم تحديث الطابور'); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تحديث الطابور', text: error.message }); }
+        try {
+          await api.patch(`/queue/${button.dataset.statusId}/status`, { status: nextStatus });
+          toast('تم تحديث الطابور');
+          if (nextStatus === 'in_consultation' && ['owner', 'doctor'].includes(currentUser?.role) && button.dataset.patientId) {
+            window.clinicApp.navigate(`/visits?patientId=${button.dataset.patientId}&start=1`);
+            return;
+          }
+          await load();
+        } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر تحديث الطابور', text: error.message }); }
       }));
       table.querySelectorAll('[data-move]').forEach((button) => button.addEventListener('click', async () => { try { await api.patch(`/queue/${button.dataset.move}/reorder`, { position: Number(button.dataset.position) }); await load(); } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر إعادة ترتيب الطابور', text: error.message }); } }));
     } catch (error) { table.innerHTML = `<div class="p-8 text-center text-sm text-red-600">${escapeHtml(error.message)}</div>`; }
   };
 
-  doctorSelect.addEventListener('change', load);
+  doctorSelect.addEventListener('change', () => {
+    try { sessionStorage.setItem('clinic.queueDoctorId', doctorSelect.value); } catch (_) { /* session storage is optional */ }
+    load();
+  });
   dateInput.addEventListener('change', load);
   document.querySelector('#pause-doctor').addEventListener('click', async () => {
     if (!doctorSelect.value) { toast('اختاري الطبيب أولًا', 'warning'); return; }
@@ -113,6 +143,7 @@ export async function render(outlet) {
   document.addEventListener('clinic:realtime', onRealtime);
   const stopPolling = startPolling(load, 10000);
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
+  if (doctorSelect.value) await load();
   return () => {
     stopPolling();
     document.removeEventListener('clinic:realtime', onRealtime);

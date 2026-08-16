@@ -40,10 +40,18 @@ const renderSidebar = (user, currentPath = window.location.pathname) => {
 };
 
 const renderTopbar = (user) => {
-  topbar.innerHTML = `<div class="flex items-center gap-3"><button id="menu-toggle" class="btn btn-ghost p-2 lg:hidden" aria-label="فتح القائمة">${icon('menu')}</button><div class="hidden md:block"><div class="text-xs text-slate-400">نظام تشغيل العيادة</div><div class="text-sm font-semibold text-slate-800">مرحبًا، ${escapeHtml(user.fullName.split(' ')[0])}</div></div></div><div class="flex items-center gap-3"><a href="/notifications" data-route="/notifications" class="btn btn-ghost p-2" aria-label="التنبيهات">${icon('bell')}</a><div class="h-8 w-px bg-slate-200"></div><div class="flex items-center gap-2"><div class="grid h-9 w-9 place-items-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">${escapeHtml(initials(user.fullName))}</div><div class="hidden sm:block"><div class="text-xs font-semibold text-slate-800">${escapeHtml(user.fullName)}</div><div class="text-[10px] text-slate-400">${escapeHtml({owner:'مالك العيادة',doctor:'طبيب',reception:'ريسبشن',patient:'مريضة'}[user.role] || user.role)}</div></div></div><button id="logout-button" class="btn btn-ghost text-xs">خروج</button></div>`;
+  const staffUser = ['owner', 'doctor', 'reception'].includes(user.role);
+  topbar.innerHTML = `<div class="topbar-leading"><button id="menu-toggle" class="btn btn-ghost p-2 lg:hidden" aria-label="فتح القائمة">${icon('menu')}</button><div class="hidden md:block"><div class="text-xs text-slate-400">نظام تشغيل العيادة</div><div class="text-sm font-semibold text-slate-800">مرحبًا، ${escapeHtml(user.fullName.split(' ')[0])}</div></div></div>${staffUser ? `<label class="topbar-search hidden sm:flex" for="global-patient-search">${icon('search')}<input id="global-patient-search" type="search" placeholder="بحث سريع عن مريضة..." autocomplete="off" aria-label="بحث سريع عن مريضة" /></label>` : ''}<div class="topbar-actions"><a href="/notifications" data-route="/notifications" class="btn btn-ghost p-2" aria-label="التنبيهات">${icon('bell')}</a><div class="h-8 w-px bg-slate-200"></div><div class="flex items-center gap-2"><div class="grid h-9 w-9 place-items-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">${escapeHtml(initials(user.fullName))}</div><div class="hidden sm:block"><div class="text-xs font-semibold text-slate-800">${escapeHtml(user.fullName)}</div><div class="text-[10px] text-slate-400">${escapeHtml({owner:'مالك العيادة',doctor:'طبيب',reception:'ريسبشن',patient:'مريضة'}[user.role] || user.role)}</div></div></div><button id="logout-button" class="btn btn-ghost text-xs">خروج</button></div>`;
   document.querySelector('#menu-toggle')?.addEventListener('click', openSidebar);
   document.querySelector('#logout-button')?.addEventListener('click', async () => { await auth.logout(); window.location.href = '/'; });
   document.querySelector('[data-route="/notifications"]')?.addEventListener('click', (event) => { event.preventDefault(); router.navigate('/notifications'); });
+  document.querySelector('#global-patient-search')?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    const value = event.currentTarget.value.trim();
+    if (!value) return;
+    event.preventDefault();
+    router.navigate(`/patients?search=${encodeURIComponent(value)}`);
+  });
 };
 
 const renderLogin = () => {

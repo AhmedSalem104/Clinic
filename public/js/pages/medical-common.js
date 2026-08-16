@@ -44,7 +44,7 @@ const renderPatientPicker = async (outlet, config, initialPatientId) => {
     } catch (error) { results.innerHTML = `<div class="p-3 text-xs text-red-600">${escapeHtml(error.message)}</div>`; }
   }, 350));
 
-  document.querySelector('#show-medical-form')?.addEventListener('click', async () => {
+  const openMedicalForm = async () => {
     if (!selected) { window.Swal.fire({ icon: 'info', title: 'اختاري المريضة أولًا' }); return; }
     const wrapper = document.querySelector('#medical-form-wrap');
     wrapper.classList.toggle('hidden');
@@ -70,10 +70,16 @@ const renderPatientPicker = async (outlet, config, initialPatientId) => {
       } catch (error) { window.Swal.fire({ icon: 'error', title: 'تعذر الحفظ', text: error.message }); }
       finally { loadingButton(button, false); }
     });
-  });
+  };
+
+  document.querySelector('#show-medical-form')?.addEventListener('click', openMedicalForm);
 
   await loadData();
+  if (config.autoOpen && selected) await openMedicalForm();
 };
 
-export const renderMedicalPage = (outlet, config) => renderPatientPicker(outlet, config, Number(new URLSearchParams(window.location.search).get('patientId') || 0));
+export const renderMedicalPage = (outlet, config) => {
+  const query = new URLSearchParams(window.location.search);
+  return renderPatientPicker(outlet, { ...config, autoOpen: config.autoOpen ?? query.get('start') === '1' }, Number(query.get('patientId') || 0));
+};
 export { input, formatDate, formatDateTime, statusBadge, escapeHtml, emptyState };
