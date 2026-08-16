@@ -1,7 +1,10 @@
 const { ok, created } = require('../../utils/response');
 const service = require('./public-booking.service');
 
-const options = async (req, res) => ok(res, await service.listOptions(req.query.doctorId ? Number(req.query.doctorId) : null));
+const options = async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
+  return ok(res, await service.listOptions(req.query.doctorId ? Number(req.query.doctorId) : null));
+};
 const slots = async (req, res) => ok(res, await service.publicSlots({
   doctorId: Number(req.query.doctorId),
   serviceId: Number(req.query.serviceId),

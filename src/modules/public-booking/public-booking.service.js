@@ -10,6 +10,18 @@ const { clinicDateKey } = require('../../utils/date');
 const { AppError } = require('../../utils/errors');
 
 const dateKey = (value) => clinicDateKey(value || Date.now());
+const OPTIONS_CACHE_TTL_MS = 15 * 1000;
+const optionsCache = new Map();
+
+const listOptions = async (doctorId = null) => {
+  const key = doctorId ? String(doctorId) : 'all';
+  const cached = optionsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+  const value = await bookingRepository.listOptions(doctorId);
+  optionsCache.set(key, { value, expiresAt: Date.now() + OPTIONS_CACHE_TTL_MS });
+  return value;
+};
 
 const publicSlots = async ({ doctorId, serviceId, date }) => {
   if (date < clinicDateKey()) throw new AppError('اختاري تاريخًا اليوم أو بعده.', 400, 'DATE_IN_PAST');
@@ -82,4 +94,4 @@ const createBooking = async (body, req) => {
   };
 };
 
-module.exports = { listOptions: bookingRepository.listOptions, publicSlots, createBooking };
+module.exports = { listOptions, publicSlots, createBooking };

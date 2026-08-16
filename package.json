@@ -10,6 +10,7 @@
     "build:css": "tailwindcss -i ./styles/tailwind.css -o ./public/css/tailwind.css --minify",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
+    "db:ensure-booking-ready": "node scripts/ensure-active-doctor-booking.js",
     "test": "node --test",
     "check": "node --check server.js && node --check src/app.js"
   },
