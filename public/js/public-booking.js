@@ -12,6 +12,7 @@ const fullNameField = form?.elements.fullName;
 const phoneField = form?.elements.phone;
 const slotsBox = document.querySelector('#available-slots');
 const slotsHelper = document.querySelector('#slots-helper');
+const doctorHelper = document.querySelector('#doctor-helper');
 const priceBox = document.querySelector('#price-box');
 const statusBox = document.querySelector('#booking-status');
 const submitButton = document.querySelector('#submit-booking');
@@ -94,8 +95,16 @@ const renderServices = (services = []) => {
 
 const renderOptions = async () => {
   const options = await publicBookingService.options();
-  doctorField.innerHTML = `<option value="">اختاري الطبيب</option>${(options.doctors || []).map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)}${doctor.Specialty ? ` · ${escapeHtml(doctor.Specialty)}` : ''}</option>`).join('')}`;
-  doctorField.disabled = !(options.doctors || []).length;
+  const doctors = options.doctors || [];
+  doctorField.innerHTML = `<option value="">اختاري الطبيب</option>${doctors.map((doctor) => {
+    const canBook = doctor.CanBook === true || doctor.CanBook === 1;
+    const unavailableReason = Number(doctor.ActiveScheduleCount || 0) === 0 ? 'لا يوجد جدول مواعيد' : 'لا توجد خدمات مرتبطة';
+    return `<option value="${doctor.Id}" ${canBook ? '' : 'disabled'}>${escapeHtml(doctor.FullName)}${doctor.Specialty ? ` · ${escapeHtml(doctor.Specialty)}` : ''}${canBook ? '' : ` · ${unavailableReason}`}</option>`;
+  }).join('')}`;
+  doctorField.disabled = !doctors.length;
+  doctorHelper.textContent = doctors.some((doctor) => !(doctor.CanBook === true || doctor.CanBook === 1))
+    ? 'الأطباء غير المتاحين يظهرون للتوضيح، ويحتاجون جدول عمل وخدمات مرتبطة قبل استقبال حجز جديد.'
+    : 'كل الأطباء الظاهرين متاحون لاختيار موعد حاليًا.';
   renderServices(options.services || []);
 };
 
@@ -161,6 +170,7 @@ updateProgress();
 renderOptions().catch((error) => {
   doctorField.innerHTML = '<option value="">تعذر تحميل الأطباء</option>';
   doctorField.disabled = true;
+  doctorHelper.textContent = 'تعذر تحميل قائمة الأطباء. حاولي تحديث الصفحة.';
   renderServices([]);
   showStatus(error.message || 'تعذر تحميل بيانات الحجز. حاولي تحديث الصفحة.', 'error');
 });

@@ -4,11 +4,22 @@ const { sql } = require('../../db/connection');
 
 const listOptions = async (doctorId = null) => {
   const result = await query(`
-    SELECT d.Id,d.FullName,d.Specialty
+    SELECT d.Id,d.FullName,d.Specialty,
+      (SELECT COUNT(1) FROM DoctorSchedules sch WHERE sch.DoctorId=d.Id AND sch.IsActive=1) ActiveScheduleCount,
+      (SELECT COUNT(1)
+       FROM DoctorServices ds
+       JOIN Services bookableService ON bookableService.Id=ds.ServiceId
+       WHERE ds.DoctorId=d.Id AND ds.IsActive=1 AND bookableService.IsActive=1 AND bookableService.RequiresBooking=1) BookableServiceCount,
+      CAST(CASE WHEN EXISTS (SELECT 1 FROM DoctorSchedules sch WHERE sch.DoctorId=d.Id AND sch.IsActive=1)
+        AND EXISTS (
+          SELECT 1
+          FROM DoctorServices ds
+          JOIN Services bookableService ON bookableService.Id=ds.ServiceId
+          WHERE ds.DoctorId=d.Id AND ds.IsActive=1 AND bookableService.IsActive=1 AND bookableService.RequiresBooking=1
+        ) THEN 1 ELSE 0 END AS bit) CanBook
     FROM Doctors d
     WHERE d.Status=N'active'
-      AND EXISTS (SELECT 1 FROM DoctorSchedules ds WHERE ds.DoctorId=d.Id AND ds.IsActive=1)
-    ORDER BY FullName;
+    ORDER BY CanBook DESC, FullName;
     SELECT Id,Name,Category,BaseDurationMinutes,RequiresQueue
     FROM Services s
     WHERE s.IsActive=1 AND s.RequiresBooking=1
