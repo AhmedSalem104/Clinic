@@ -87,7 +87,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .gateway-brand { display: inline-flex; align-items: center; gap: 11px; color: #fff; font-size: 20px; font-weight: 700; text-decoration: none; }
 .gateway-brand-mark { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.35); border-radius: 13px; background: rgba(255,255,255,.13); color: #fff; font-size: 25px; line-height: 1; }
 .gateway-header-note { color: rgba(255,255,255,.72); font-size: 12px; }
+.gateway-header-links { display: flex; align-items: center; gap: 10px; }
+.gateway-header-links a, .gateway-footer-link { color: rgba(255,255,255,.82); font-size: 12px; font-weight: 600; text-decoration: none; transition: color .15s ease, background .15s ease, border-color .15s ease; }
+.gateway-header-links a:hover, .gateway-footer-link:hover { color: #fff; }
+.gateway-patient-link { padding: 8px 4px; }
+.gateway-staff-link { padding: 9px 13px; border: 1px solid rgba(219,234,254,.3); border-radius: 9px; background: rgba(255,255,255,.08); }
+.gateway-staff-link:hover { background: rgba(255,255,255,.16); }
 .gateway-layout { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) minmax(320px, 390px); align-items: center; gap: clamp(28px, 7vw, 112px); width: min(1240px, 100%); margin: 0 auto; padding: 58px 0 36px; }
+.gateway-layout.gateway-booking-layout { grid-template-columns: minmax(0, 760px); justify-content: center; gap: 0; }
+.gateway-booking-layout .gateway-copy { width: 100%; max-width: 760px; }
 .gateway-copy { max-width: 640px; }
 .gateway-kicker { display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px; border: 1px solid rgba(191, 219, 254, .34); border-radius: 999px; background: rgba(15, 63, 88, .58); color: #dbeafe; font-size: 12px; font-weight: 600; }
 .gateway-kicker svg, .gateway-primary-action svg, .gateway-secondary-action svg, .gateway-staff-button svg, .gateway-back-link svg, .gateway-login-button svg { width: 18px; height: 18px; flex: 0 0 auto; }
@@ -98,11 +106,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .gateway-primary-action, .gateway-secondary-action { display: inline-flex; min-height: 66px; align-items: center; gap: 12px; border-radius: 13px; padding: 12px 16px; text-decoration: none; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
 .gateway-primary-action { min-width: 250px; justify-content: space-between; background: #2563eb; color: #fff; box-shadow: 0 12px 26px rgba(8, 47, 107, .28); }
 .gateway-primary-action:hover { background: #1d4ed8; transform: translateY(-2px); }
+.gateway-booking-layout .gateway-primary-action { min-width: 310px; }
 .gateway-secondary-action { border: 1px solid rgba(219, 234, 254, .3); background: rgba(255,255,255,.1); color: #fff; }
 .gateway-secondary-action:hover { background: rgba(255,255,255,.18); transform: translateY(-2px); }
 .gateway-primary-action span, .gateway-secondary-action span { display: grid; gap: 3px; }
 .gateway-primary-action strong, .gateway-secondary-action strong { font-size: 14px; }
 .gateway-primary-action small, .gateway-secondary-action small { color: rgba(239,246,255,.7); font-size: 11px; }
+.gateway-patient-login-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 15px; color: rgba(239,246,255,.82); font-size: 13px; text-decoration: none; transition: color .15s ease; }
+.gateway-patient-login-link:hover { color: #fff; }
+.gateway-patient-login-link svg { width: 17px; height: 17px; }
+.gateway-patient-login-link svg:last-child { width: 15px; height: 15px; }
+.gateway-patient-login-link strong { color: #bfdbfe; font-weight: 700; }
 .gateway-steps { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 42px; color: rgba(219, 234, 254, .78); font-size: 12px; }
 .gateway-steps div { display: inline-flex; align-items: center; gap: 8px; }
 .gateway-steps b { color: #93c5fd; font-size: 11px; letter-spacing: .08em; }
@@ -124,6 +138,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .gateway-login-help { margin-bottom: 22px; }
 .gateway-login-button { margin-top: 4px; }
 .gateway-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; width: min(1240px, 100%); margin: 0 auto; padding-top: 16px; border-top: 1px solid rgba(219,234,254,.18); color: rgba(219,234,254,.7); font-size: 11px; }
+.gateway-footer-link { color: rgba(219,234,254,.82); font-size: 11px; }
 .gateway .form-label { color: #334155; }
 .gateway .alert-danger { margin-top: 2px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -376,11 +391,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .topbar { height: 64px; }
   .gateway-content { padding: 20px 16px 16px; }
   .gateway-header-note { display: none; }
+  .gateway-patient-link { display: none; }
   .gateway-layout { padding: 38px 0 24px; }
   .gateway-copy h1 { margin-top: 20px; font-size: 42px; }
   .gateway-copy > p { font-size: 14px; line-height: 1.9; }
   .gateway-actions { flex-direction: column; }
   .gateway-primary-action, .gateway-secondary-action { width: 100%; }
+  .gateway-booking-layout .gateway-primary-action { min-width: 0; }
   .gateway-steps { gap: 12px; margin-top: 28px; }
   .gateway-footer { justify-content: flex-start; }
   .gateway-backdrop { background-position: 62% center; }

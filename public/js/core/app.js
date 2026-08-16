@@ -64,32 +64,27 @@ const renderLogin = () => {
   loginView.innerHTML = `<section class="gateway">
     <div class="gateway-backdrop" aria-hidden="true"></div>
     <div class="gateway-content">
-      <header class="gateway-header"><a class="gateway-brand" href="/"><span class="gateway-brand-mark">+</span><span>عيادتي</span></a><span class="gateway-header-note">رعاية نسائية منظمة وواضحة</span></header>
-      <div class="gateway-layout">
+      <header class="gateway-header"><a class="gateway-brand" href="/"><span class="gateway-brand-mark">+</span><span>عيادتي</span></a><div class="gateway-header-links"><a class="gateway-patient-link" href="/?patient=1">متابعة موعدي</a><a class="gateway-staff-link" href="/?staff=1">دخول فريق العيادة</a></div></header>
+      <div class="gateway-layout ${showStaff || showPatientLogin ? 'gateway-auth-layout' : 'gateway-booking-layout'}">
         <div class="gateway-copy">
           <div class="gateway-kicker">${icon('calendar')} <span>حجز المريضة يبدأ من هنا</span></div>
           <h1>احجزي موعدك<br><span>بسهولة واطمئنان.</span></h1>
-          <p>اختاري الطبيب والخدمة والموعد المناسب لكِ، واحصلي على رقم الحجز والدور المتوقع بدون إنشاء حساب أو استخدام رمز تحقق.</p>
+          <p>اختاري الطبيب والخدمة والموعد المناسب لكِ، واحصلي على رقم الحجز والدور المتوقع بدون تسجيل دخول.</p>
           <div class="gateway-actions">
             <a class="gateway-primary-action" href="/patient-booking.html">${icon('calendar')}<span><strong>احجزي موعدًا الآن</strong><small>بدون تسجيل دخول</small></span>${icon('arrow')}</a>
-            <a class="gateway-secondary-action" href="/patient-register.html">${icon('users')}<span><strong>إنشاء حساب للمريضة</strong><small>لمتابعة المواعيد والدور لاحقًا</small></span></a>
           </div>
+          <a class="gateway-patient-login-link" href="/?patient=1">${icon('users')}<span>لديكِ حساب؟ <strong>تابعي مواعيدك ودورك</strong></span>${icon('arrow')}</a>
           <div class="gateway-steps"><div><b>01</b><span>اختاري الموعد</span></div><div><b>02</b><span>احفظي رقم الحجز</span></div><div><b>03</b><span>تابعي دورك</span></div></div>
         </div>
-        <section id="staff-entry-card" class="gateway-staff-entry ${showStaff || showPatientLogin ? 'hidden' : ''}"><div class="gateway-staff-icon">${icon('users')}</div><span class="gateway-card-label">للعاملين في العيادة</span><h2>دخول الريسبشن والمالك</h2><p>إدارة الحجوزات والطابور والمرضى والصلاحيات من بوابة فريق العيادة.</p><button id="open-staff-login" class="gateway-staff-button" type="button">دخول فريق العيادة ${icon('arrow')}</button></section>
-        <section id="staff-login-card" class="gateway-login-card ${showStaff || showPatientLogin ? '' : 'hidden'}"><button id="back-to-patient" class="gateway-back-link" type="button">${icon('arrow')} العودة إلى حجز المريضة</button><div class="gateway-login-heading"><span class="gateway-staff-icon">${icon(showPatientLogin ? 'users' : 'shield')}</span><div><span class="gateway-card-label">${loginMode.label}</span><h2>${loginMode.title}</h2></div></div><p class="gateway-login-help">${loginMode.help}</p><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="name@example.com" required /></div><div><label class="form-label" for="login-password">كلمة المرور</label><input class="input" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="gateway-login-button" type="submit">${loginMode.button} ${icon('arrow')}</button></form></section>
+        ${showStaff || showPatientLogin ? `<section id="staff-login-card" class="gateway-login-card"><button id="back-to-patient" class="gateway-back-link" type="button">${icon('arrow')} العودة إلى الحجز</button><div class="gateway-login-heading"><span class="gateway-staff-icon">${icon(showPatientLogin ? 'users' : 'shield')}</span><div><span class="gateway-card-label">${loginMode.label}</span><h2>${loginMode.title}</h2></div></div><p class="gateway-login-help">${loginMode.help}</p><form id="login-form" class="space-y-5"><div><label class="form-label" for="login-email">البريد الإلكتروني</label><input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="name@example.com" required /></div><div><label class="form-label" for="login-password">كلمة المرور</label><input class="input" id="login-password" name="password" type="password" autocomplete="current-password" required /></div><div id="login-error" class="alert alert-danger hidden"></div><button class="gateway-login-button" type="submit">${loginMode.button} ${icon('arrow')}</button></form></section>` : ''}
       </div>
-      <footer class="gateway-footer"><span>الحجز الأول لا يحتاج تسجيل دخول.</span><span>عند الوصول، يستكمل الريسبشن بيانات الملف الطبي.</span></footer>
+      <footer class="gateway-footer"><span>الحجز الأول لا يحتاج تسجيل دخول أو رمز تحقق.</span><a class="gateway-footer-link" href="/?staff=1">دخول فريق العيادة</a></footer>
     </div>
   </section>`;
   loginView.classList.remove('hidden');
   appView.classList.add('hidden');
 
-  const staffEntry = document.querySelector('#staff-entry-card');
-  const staffCard = document.querySelector('#staff-login-card');
-  const openStaff = () => { staffEntry.classList.add('hidden'); staffCard.classList.remove('hidden'); window.history.replaceState({}, '', '/?staff=1'); document.querySelector('#login-email')?.focus(); };
-  const showPatientEntry = () => { staffCard.classList.add('hidden'); staffEntry.classList.remove('hidden'); window.history.replaceState({}, '', '/'); };
-  document.querySelector('#open-staff-login')?.addEventListener('click', openStaff);
+  const showPatientEntry = () => { window.history.replaceState({}, '', '/'); renderLogin(); };
   document.querySelector('#back-to-patient')?.addEventListener('click', showPatientEntry);
   document.querySelector('#login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
