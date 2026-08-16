@@ -26,7 +26,7 @@ export async function render(outlet) {
   ]);
   const today = localDateKey();
 
-  outlet.innerHTML = `<div class="section-heading"><div><h1>حجز جديد</h1><p>اختاري المريضة والطبيب والخدمة والتاريخ والموعد المتاح.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">العودة إلى الحجوزات</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><label class="form-label">المريضة <span class="text-red-500">*</span></label><input id="patient-search-booking" class="input" placeholder="ابحثي بالاسم أو الهاتف أو معرّف المريضة" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div><p class="mt-2 text-xs text-slate-500">ابدئي بالبحث ثم اضغطي على المريضة من النتائج لتثبيت ملفها في الحجز.</p></div><div><label class="form-label">الطبيب <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">اختاري الطبيب</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">الخدمة <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">اختاري الخدمة</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}</select></div><div><label class="form-label">التاريخ <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">مصدر الحجز</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>الريسبشن</option><option value="phone">هاتف</option><option value="online">إلكتروني</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>بدون موعد</option></select></div><div class="span-2"><label class="form-label">المواعيد المتاحة</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('اختاري الطبيب والخدمة والتاريخ.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">ملاحظات تشغيلية</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="لا تكتبي تشخيصًا أو ملاحظات طبية حساسة هنا."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">تأكيد الحجز</button></div></form>`;
+  outlet.innerHTML = `<div class="section-heading"><div><h1>حجز جديد</h1><p>اختاري المريضة والطبيب والخدمة والتاريخ والموعد المتاح.</p></div><a class="btn btn-secondary" href="/appointments" data-route="/appointments">العودة إلى الحجوزات</a></div><form id="appointment-form" class="card p-5"><div class="form-grid"><div class="span-2"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><label class="form-label mb-0">المريضة <span class="text-red-500">*</span></label><button id="open-quick-patient" class="btn btn-secondary text-xs" type="button">+ إضافة مريضة جديدة</button></div><input id="patient-search-booking" class="input" placeholder="ابحثي بالاسم أو الهاتف أو معرّف المريضة" autocomplete="off" /><input type="hidden" name="patientId" value="${escapeHtml(queryPatient)}" /><div id="patient-results" class="mt-2"></div><div id="selected-patient" class="mt-2"></div><div id="quick-patient-panel" class="mt-3 hidden rounded-xl border border-blue-100 bg-blue-50 p-4"><div class="mb-3"><strong class="text-sm text-blue-950">إضافة مريضة سريعة</strong><p class="mt-1 text-xs text-blue-800">أدخلي الاسم والهاتف فقط لإتمام الحجز، ويمكن استكمال باقي الملف لاحقًا.</p></div><div class="form-grid"><div><label class="form-label">الاسم الكامل <span class="text-red-500">*</span></label><input id="quick-patient-name" class="input bg-white" maxlength="180" /></div><div><label class="form-label">رقم الهاتف <span class="text-red-500">*</span></label><input id="quick-patient-phone" class="input bg-white" inputmode="tel" maxlength="40" /></div><div><label class="form-label">تاريخ الميلاد <span class="text-slate-500">اختياري</span></label><input id="quick-patient-dob" class="input bg-white" type="date" /></div></div><div class="mt-4 flex justify-end gap-2"><button id="cancel-quick-patient" class="btn btn-secondary text-xs" type="button">إلغاء</button><button id="save-quick-patient" class="btn btn-primary text-xs" type="button">حفظ واختيار المريضة</button></div></div><p class="mt-2 text-xs text-slate-500">ابحثي ثم اضغطي على المريضة من النتائج لتثبيت ملفها، أو أضيفي سجلًا سريعًا جديدًا.</p></div><div><label class="form-label">الطبيب <span class="text-red-500">*</span></label><select class="select" name="doctorId" required><option value="">اختاري الطبيب</option>${(doctors.data || []).filter((doctor) => doctor.Status === 'active').map((doctor) => `<option value="${doctor.Id}">${escapeHtml(doctor.FullName)} · ${escapeHtml(doctor.Specialty || '')}</option>`).join('')}</select></div><div><label class="form-label">الخدمة <span class="text-red-500">*</span></label><select class="select" name="serviceId" required><option value="">اختاري الخدمة</option>${(services.data || []).filter((service) => service.IsActive).map((service) => `<option value="${service.Id}" data-duration="${service.BaseDurationMinutes}">${escapeHtml(service.Name)} · ${service.BaseDurationMinutes} دقيقة</option>`).join('')}</select></div><div><label class="form-label">التاريخ <span class="text-red-500">*</span></label><input class="input" name="date" type="date" min="${today}" value="${today}" required /></div><div><label class="form-label">مصدر الحجز</label><select class="select" name="bookingSource"><option value="reception" ${requestedSource === 'reception' ? 'selected' : ''}>الريسبشن</option><option value="phone">هاتف</option><option value="online">إلكتروني</option><option value="walk_in" ${requestedSource === 'walk_in' ? 'selected' : ''}>بدون موعد</option></select></div><div class="span-2"><label class="form-label">المواعيد المتاحة</label><div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">${emptyState('اختاري الطبيب والخدمة والتاريخ.')}</div><input type="hidden" name="startAt" required /></div><div class="span-2"><label class="form-label">ملاحظات تشغيلية</label><textarea class="textarea" name="notes" maxlength="1000" placeholder="لا تكتبي تشخيصًا أو ملاحظات طبية حساسة هنا."></textarea></div></div><div class="mt-6 flex justify-end"><button class="btn btn-primary" type="submit">تأكيد الحجز</button></div></form>`;
 
   const form = document.querySelector('#appointment-form');
   const patientInput = document.querySelector('#patient-search-booking');
@@ -58,12 +58,35 @@ export async function render(outlet) {
     priceBox.className = 'mb-3';
     slotsBox.parentElement.insertBefore(priceBox, slotsBox);
   }
+  const renderSelectedPatient = (patient) => {
+    const selectedBox = document.querySelector('#selected-patient');
+    if (!selectedBox || !patient) return;
+    selectedBox.innerHTML = `<div class="flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><span><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.PatientCode || '')}<span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.Phone || '')}</span><button id="clear-selected-patient" class="text-xs font-semibold text-blue-700 hover:text-blue-950" type="button">تغيير</button></div>`;
+    selectedBox.querySelector('#clear-selected-patient')?.addEventListener('click', () => {
+      selectedPatientId = null;
+      patientIdField.value = '';
+      form.dataset.patientId = '';
+      selectedBox.innerHTML = '';
+      patientInput?.focus();
+    });
+  };
+
+  const selectPatient = (patient) => {
+    const normalizedId = positiveId(patient?.Id || patient);
+    if (!normalizedId) return false;
+    selectedPatientId = normalizedId;
+    patientIdField.value = String(normalizedId);
+    form.dataset.patientId = String(normalizedId);
+    if (typeof patient === 'object') renderSelectedPatient(patient);
+    return true;
+  };
+
   const showSelected = async (id) => {
     const normalizedId = positiveId(id);
     if (!normalizedId) return;
     try {
       const patient = await patientService.get(normalizedId);
-      document.querySelector('#selected-patient').innerHTML = `<div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.PatientCode)}<span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.Phone)}</div>`;
+      selectPatient(patient);
     } catch (_) { /* keep the picker usable */ }
   };
   if (queryPatient && !isPatientBooking) await showSelected(queryPatient);
@@ -81,18 +104,82 @@ export async function render(outlet) {
     form.querySelector('button[type=submit]').textContent = 'حفظ إعادة الجدولة';
   }
 
+  const quickPatientPanel = document.querySelector('#quick-patient-panel');
+  const openQuickPatient = () => {
+    quickPatientPanel?.classList.remove('hidden');
+    document.querySelector('#quick-patient-name')?.focus();
+  };
+  document.querySelector('#open-quick-patient')?.addEventListener('click', openQuickPatient);
+  document.querySelector('#cancel-quick-patient')?.addEventListener('click', () => quickPatientPanel?.classList.add('hidden'));
+  document.querySelector('#quick-patient-from-results')?.addEventListener('click', openQuickPatient);
+
+  document.querySelector('#save-quick-patient')?.addEventListener('click', async () => {
+    const nameField = document.querySelector('#quick-patient-name');
+    const phoneField = document.querySelector('#quick-patient-phone');
+    const dobField = document.querySelector('#quick-patient-dob');
+    const saveButton = document.querySelector('#save-quick-patient');
+    const fullName = nameField?.value.trim() || '';
+    const phone = phoneField?.value.trim() || '';
+    if (fullName.length < 2 || phone.length < 5) {
+      window.Swal.fire({ icon: 'warning', title: 'بيانات المريضة ناقصة', text: 'أدخلي الاسم الكامل ورقم هاتف صحيح.' });
+      return;
+    }
+    loadingButton(saveButton, true);
+    try {
+      const patient = await patientService.create({ fullName, phone, dateOfBirth: dobField?.value || null, profileStatus: 'incomplete' });
+      selectPatient(patient);
+      quickPatientPanel?.classList.add('hidden');
+      nameField.value = '';
+      phoneField.value = '';
+      if (dobField) dobField.value = '';
+      toast('تم إنشاء المريضة واختيارها للحجز');
+    } catch (error) {
+      if (error.code === 'POTENTIAL_DUPLICATE' && error.details?.matches?.length) {
+        const match = error.details.matches[0];
+        const result = await window.Swal.fire({
+          icon: 'warning',
+          title: 'يوجد سجل مشابه',
+          html: `<p class="text-sm text-slate-600">${escapeHtml(match.FullName)} · ${escapeHtml(match.PatientCode)} · ${escapeHtml(match.Phone)}</p>`,
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: 'استخدام السجل الموجود',
+          denyButtonText: 'إنشاء سجل جديد',
+          cancelButtonText: 'إلغاء',
+          confirmButtonColor: '#2563eb',
+          denyButtonColor: '#64748b'
+        });
+        if (result.isConfirmed) {
+          selectPatient(match);
+          quickPatientPanel?.classList.add('hidden');
+        } else if (result.isDenied) {
+          try {
+            const patient = await patientService.create({ fullName, phone, dateOfBirth: dobField?.value || null, profileStatus: 'incomplete', confirmDuplicate: true });
+            selectPatient(patient);
+            quickPatientPanel?.classList.add('hidden');
+            toast('تم إنشاء المريضة واختيارها للحجز');
+          } catch (retryError) {
+            window.Swal.fire({ icon: 'error', title: 'تعذر حفظ المريضة', text: retryError.message });
+          }
+        }
+      } else {
+        window.Swal.fire({ icon: 'error', title: 'تعذر إضافة المريضة', text: error.message });
+      }
+    } finally { loadingButton(saveButton, false); }
+  });
+
   if (!isPatientBooking) patientInput.addEventListener('input', debounce(async () => {
     const search = patientInput.value.trim();
     selectedPatientId = null;
     patientIdField.value = '';
+    form.dataset.patientId = '';
     document.querySelector('#selected-patient').innerHTML = '';
     if (search.length < 2) { results.innerHTML = ''; return; }
     try {
       const response = await patientService.list({ search, page: 1, pageSize: 8 });
-      results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="p-3 text-xs text-slate-500">لا توجد مريضات مطابقة.</div>';
+      results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">لا توجد مريضة بهذا البحث. <button id="quick-patient-from-results" type="button" class="font-semibold text-blue-700">إضافة مريضة جديدة</button></div>';
+      results.querySelector('#quick-patient-from-results')?.addEventListener('click', openQuickPatient);
       results.querySelectorAll('[data-patient-id]').forEach((button) => button.addEventListener('click', () => {
-        selectedPatientId = positiveId(button.dataset.patientId);
-        patientIdField.value = selectedPatientId || '';
+        selectPatient({ Id: button.dataset.patientId, FullName: button.querySelector('strong')?.textContent || '', PatientCode: button.querySelector('span')?.textContent?.split('·')[0]?.trim() || '', Phone: button.querySelector('span')?.textContent?.split('·').slice(-1)[0]?.trim() || '' });
         patientInput.value = '';
         results.innerHTML = '';
         showSelected(button.dataset.patientId);
@@ -131,7 +218,7 @@ export async function render(outlet) {
   form.date.addEventListener('change', updateSlots);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const patientId = isPatientBooking ? positiveId(currentUser?.patientId) : (selectedPatientId || positiveId(patientIdField?.value));
+    const patientId = isPatientBooking ? positiveId(currentUser?.patientId) : (positiveId(form.dataset.patientId) || selectedPatientId || positiveId(patientIdField?.value));
     const selectedStartAt = startAtField?.value || '';
     if (!patientId || !selectedStartAt) {
       const missingMessage = !patientId

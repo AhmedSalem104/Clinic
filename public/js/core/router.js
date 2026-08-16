@@ -9,7 +9,7 @@ const routes = [
   { match: /^\/assignments\/?$/, load: () => import('../pages/assignments.js') },
   { match: /^\/patients\/(\d+)\/?$/, load: () => import('../pages/patient-profile.js') },
   { match: /^\/appointments\/?$/, load: () => import('../pages/appointments.js') },
-  { match: /^\/appointments\/new\/?$/, load: () => import('../pages/appointment-form.js?v=20260816-booking-fix') },
+  { match: /^\/appointments\/new\/?$/, load: () => import('../pages/appointment-form.js?v=20260816-booking-flow2') },
   { match: /^\/queue\/?$/, load: () => import('../pages/queue.js') },
   { match: /^\/doctors\/?$/, load: () => import('../pages/doctors.js') },
   { match: /^\/schedules\/?$/, load: () => import('../pages/schedules.js') },
