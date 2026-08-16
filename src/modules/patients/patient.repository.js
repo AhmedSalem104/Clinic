@@ -190,10 +190,10 @@ const getDeleteTarget = async (id) => {
 
 const assign = async ({ patientId, doctorId, assignmentType, caseId, assignedBy }) => withTransaction(async (transaction) => {
   const doctor = await transaction.request().input('doctorId', sql.Int, doctorId).query('SELECT TOP 1 Id FROM Doctors WHERE Id=@doctorId AND Status=N\'active\'');
-  if (!doctor.recordset[0]) throw new AppError('The selected doctor is not active.', 400, 'DOCTOR_NOT_ACTIVE');
+  if (!doctor.recordset[0]) throw new AppError('الطبيب المختار غير متاح حاليًا. اختاري طبيبًا نشطًا.', 400, 'DOCTOR_NOT_ACTIVE');
   if (caseId) {
     const medicalCase = await transaction.request().input('patientId', sql.Int, patientId).input('caseId', sql.Int, caseId).query('SELECT TOP 1 Id FROM MedicalCases WHERE Id=@caseId AND PatientId=@patientId');
-    if (!medicalCase.recordset[0]) throw new AppError('The selected case does not belong to this patient.', 400, 'CASE_PATIENT_MISMATCH');
+    if (!medicalCase.recordset[0]) throw new AppError('الحالة المختارة لا تتبع ملف هذه المريضة.', 400, 'CASE_PATIENT_MISMATCH');
   }
   const request = transaction.request();
   request.input('patientId', sql.Int, patientId).input('doctorId', sql.Int, doctorId).input('assignmentType', sql.NVarChar(30), assignmentType).input('caseId', sql.Int, caseId || null).input('assignedBy', sql.Int, assignedBy);

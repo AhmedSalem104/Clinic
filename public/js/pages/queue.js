@@ -4,16 +4,31 @@ import { escapeHtml, formatDateTime, statusBadge, emptyState, toast, confirm, lo
 
 const activeStatuses = ['booked', 'confirmed', 'arrived', 'waiting', 'late', 'in_consultation'];
 const finishedStatuses = ['completed', 'no_show', 'cancelled', 'skipped'];
+const allowedTransitions = Object.freeze({
+  booked: ['confirmed', 'arrived', 'waiting', 'late', 'in_consultation', 'no_show', 'skipped'],
+  confirmed: ['arrived', 'waiting', 'late', 'in_consultation', 'no_show', 'skipped'],
+  arrived: ['waiting', 'late', 'in_consultation', 'no_show', 'skipped'],
+  waiting: ['late', 'in_consultation', 'no_show', 'skipped'],
+  late: ['waiting', 'in_consultation', 'completed', 'no_show', 'skipped'],
+  in_consultation: ['completed']
+});
+
+const isQueueEnded = (row, now = Date.now()) => {
+  if (finishedStatuses.includes(row.Status) || row.ConsultationEndedAt) return true;
+  if (row.Status === 'in_consultation') return false;
+  const expectedEnd = new Date(row.ExpectedEndAt || '').getTime();
+  return Number.isFinite(expectedEnd) && expectedEnd <= now;
+};
 
 const queueBoard = (rows) => {
-  const active = rows.filter((row) => activeStatuses.includes(row.Status));
-  const completed = rows.filter((row) => row.Status === 'completed').length;
+  const active = rows.filter((row) => activeStatuses.includes(row.Status) && !isQueueEnded(row));
+  const completed = rows.filter((row) => isQueueEnded(row)).length;
   const current = rows.find((row) => row.Status === 'in_consultation') || active[0];
   const progress = rows.length ? Math.round((completed / rows.length) * 100) : 0;
   return `<section class="queue-live-board" aria-live="polite">
     <div class="queue-now-serving ${current?.Status === 'in_consultation' ? 'is-consulting' : ''}"><span class="queue-board-kicker">${current?.Status === 'in_consultation' ? 'يُكشف الآن' : 'التالي على الدور'}</span><strong>${current ? `#${current.QueueNumber}` : '—'}</strong><span>${current ? escapeHtml(current.PatientName) : 'لا يوجد دور نشط الآن'}</span></div>
-    <div class="queue-board-stat"><span>في الانتظار</span><strong>${active.filter((row) => ['booked', 'confirmed', 'arrived', 'waiting', 'late'].includes(row.Status)).length}</strong><small>مريضة</small></div>
-    <div class="queue-board-stat queue-board-progress"><div><span>تقدم اليوم</span><strong>${progress}%</strong></div><div class="queue-progress-track"><span style="width:${progress}%"></span></div><small>${completed} من ${rows.length} مكتمل</small></div>
+     <div class="queue-board-stat"><span>في الانتظار</span><strong>${active.filter((row) => ['booked', 'confirmed', 'arrived', 'waiting', 'late'].includes(row.Status)).length}</strong><small>مريضة</small></div>
+    <div class="queue-board-stat queue-board-progress"><div><span>تقدم اليوم</span><strong>${progress}%</strong></div><div class="queue-progress-track"><span style="width:${progress}%"></span></div><small>${completed} من ${rows.length} منتهٍ أو مكتمل</small></div>
   </section>`;
 };
 
@@ -28,9 +43,15 @@ const statusChoices = [
 ];
 
 const queueActions = (row) => {
+  const ended = isQueueEnded(row);
+  if (ended) {
+    const label = row.Status === 'completed' ? 'اكتمل الكشف' : finishedStatuses.includes(row.Status) ? 'أُغلق هذا الدور' : 'انتهى الوقت المتوقع';
+    return `<div class="queue-action-closed" aria-label="${label}"><strong>${label}</strong><small>للعرض فقط · لا توجد إجراءات نشطة</small></div>`;
+  }
   const canMove = activeStatuses.includes(row.Status);
+  const transitions = allowedTransitions[row.Status] || [];
   const actions = statusChoices
-    .filter(([nextStatus]) => nextStatus !== row.Status && (nextStatus !== 'completed' || ['in_consultation', 'late'].includes(row.Status)))
+    .filter(([nextStatus]) => transitions.includes(nextStatus))
     .map(([nextStatus, label, className]) => `<button type="button" class="queue-action-button ${className}" data-status-id="${row.Id}" data-status="${nextStatus}">${label}</button>`)
     .join('');
   if (!canMove && !actions) return '<span class="queue-action-closed">لا توجد إجراءات</span>';
@@ -57,14 +78,17 @@ export async function render(outlet) {
     try {
       const result = await api.get(`/queue?doctorId=${doctorId}&date=${dateInput.value}`);
       const rows = result.entries || [];
-      const waitingCount = rows.filter((row) => ['waiting', 'late'].includes(row.Status)).length;
+      const waitingCount = rows.filter((row) => ['waiting', 'late'].includes(row.Status) && !isQueueEnded(row)).length;
       state.innerHTML = `${waitingCount} في الانتظار · ${result.pause ? `آخر توقف: ${statusBadge(result.pause.Status)}` : 'لا يوجد توقف مسجل'}`;
-      const firstActiveId = rows.find((row) => activeStatuses.includes(row.Status))?.Id;
+      const firstActiveId = rows.find((row) => activeStatuses.includes(row.Status) && !isQueueEnded(row))?.Id;
       const tableMarkup = rows.length ? `<div class="queue-board-wrap">${queueBoard(rows)}</div><table class="data-table"><thead><tr><th>#</th><th>المريضة</th><th>الخدمة</th><th>الموعد</th><th>الوقت المتوقع</th><th>الانتظار</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>${rows.map((row) => {
         const isCurrent = row.Status === 'in_consultation';
-        const isNext = !isCurrent && row.Id === firstActiveId;
-        const rowClass = isCurrent ? 'queue-current-row' : isNext ? 'queue-next-row' : '';
-        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${isCurrent ? '<small class="queue-row-hint">يُكشف الآن</small>' : isNext ? '<small class="queue-row-hint">التالي</small>' : ''}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${row.ExpectedStartAt ? `${formatDateTime(row.ExpectedStartAt)} – ${row.ExpectedEndAt ? formatDateTime(row.ExpectedEndAt) : '—'}` : 'جارٍ إعادة الحساب'}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td>${queueActions(row)}</td></tr>`;
+        const ended = isQueueEnded(row);
+        const isNext = !isCurrent && !ended && row.Id === firstActiveId;
+        const rowClass = isCurrent ? 'queue-current-row' : isNext ? 'queue-next-row' : ended ? 'queue-finished-row' : '';
+        const rowHint = isCurrent ? '<small class="queue-row-hint">يُكشف الآن</small>' : isNext ? '<small class="queue-row-hint">التالي</small>' : ended ? '<small class="queue-row-hint is-muted">للعرض فقط</small>' : '';
+        const expectedTime = row.ExpectedStartAt ? `${formatDateTime(row.ExpectedStartAt)} – ${row.ExpectedEndAt ? formatDateTime(row.ExpectedEndAt) : '—'}` : 'جارٍ إعادة الحساب';
+        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ended ? 'is-ended' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${rowHint}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${expectedTime}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td>${queueActions(row)}</td></tr>`;
       }).join('')}</tbody></table>` : emptyState('لا توجد مريضات في طابور هذا الطبيب وهذا التاريخ.');
       table.innerHTML = tableMarkup;
       table.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));

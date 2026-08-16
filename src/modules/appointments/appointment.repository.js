@@ -110,8 +110,8 @@ const loadScheduleContext = async (request, doctorId, serviceId, startAt) => {
 };
 
 const validateBookableTime = ({ context, startAt }) => {
-  if (!context.service) throw new AppError('The selected service is not available for this doctor.', 400, 'SERVICE_NOT_AVAILABLE');
-  if (!context.schedule) throw new AppError('The doctor has no working schedule for this date.', 409, 'SCHEDULE_UNAVAILABLE');
+  if (!context.service) throw new AppError('الخدمة المختارة غير متاحة مع هذا الطبيب. اختاري خدمة أخرى أو طبيبًا آخر.', 400, 'SERVICE_NOT_AVAILABLE');
+  if (!context.schedule) throw new AppError('لا يوجد جدول عمل للطبيب في التاريخ المختار. اختاري تاريخًا آخر.', 409, 'SCHEDULE_UNAVAILABLE');
 
   const start = new Date(startAt);
   const end = new Date(start.getTime() + context.service.BaseDurationMinutes * 60000);
@@ -123,7 +123,7 @@ const validateBookableTime = ({ context, startAt }) => {
   let scheduleEnd = clockToMinutes(context.schedule.EndTime);
 
   const exception = context.exceptions.find((item) => ['vacation', 'unavailable'].includes(item.ExceptionType));
-  if (exception) throw new AppError('The doctor is unavailable on the selected date.', 409, 'DOCTOR_UNAVAILABLE');
+  if (exception) throw new AppError('الطبيب غير متاح في التاريخ المختار. اختاري تاريخًا آخر.', 409, 'DOCTOR_UNAVAILABLE');
   const special = context.exceptions.find((item) => item.ExceptionType === 'special' && item.StartTime && item.EndTime);
   if (special) {
     scheduleStart = clockToMinutes(special.StartTime);
@@ -131,7 +131,7 @@ const validateBookableTime = ({ context, startAt }) => {
   }
 
   if (startMinute < scheduleStart || endMinute > scheduleEnd) {
-    throw new AppError('The selected time is outside the doctor schedule.', 409, 'OUTSIDE_SCHEDULE');
+    throw new AppError('الوقت المختار خارج ساعات عمل الطبيب. اختاري وقتًا من المواعيد المتاحة.', 409, 'OUTSIDE_SCHEDULE');
   }
 
   const breaks = parseBreaks(context.schedule.BreaksJson);
@@ -140,10 +140,10 @@ const validateBookableTime = ({ context, startAt }) => {
     const breakEnd = clockToMinutes(item.end || item.EndTime || item.to);
     return overlaps(startMinute, endMinute, breakStart, breakEnd);
   });
-  if (blockedBreak) throw new AppError('The selected time overlaps a doctor break.', 409, 'SCHEDULE_BREAK');
+  if (blockedBreak) throw new AppError('الوقت المختار يتعارض مع فترة راحة الطبيب. اختاري وقتًا آخر.', 409, 'SCHEDULE_BREAK');
 
   const blockedPause = context.pauses.some((item) => overlaps(start.getTime(), end.getTime(), new Date(item.StartedAt).getTime(), new Date(item.EndAt).getTime()));
-  if (blockedPause) throw new AppError('The selected time overlaps a doctor pause.', 409, 'DOCTOR_PAUSED');
+  if (blockedPause) throw new AppError('الطبيب متوقف مؤقتًا خلال الوقت المختار. اختاري موعدًا آخر.', 409, 'DOCTOR_PAUSED');
 };
 
 const availableSlots = async ({ doctorId, serviceId, date }) => {
@@ -208,7 +208,7 @@ const createInTransaction = async (transaction, { patientId, doctorId, serviceId
       WHERE DoctorId=@doctorId AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'in_consultation',N'late')
         AND StartAt<@endAt AND COALESCE(EndAt,DATEADD(MINUTE,ExpectedDurationMinutes,StartAt))>@startAt;
     `);
-  if (overlap.recordset[0]) throw new AppError('The selected time overlaps an existing appointment.', 409, 'OVERLAPPING_BOOKING');
+  if (overlap.recordset[0]) throw new AppError('هذا الموعد محجوز بالفعل. اختاري وقتًا آخر من المواعيد المتاحة.', 409, 'OVERLAPPING_BOOKING');
 
   const trackingToken = crypto.randomBytes(24).toString('hex');
   const appointmentResult = await transaction.request()
@@ -264,13 +264,13 @@ const getById = async (id) => {
 const reschedule = async (id, startAt) => withTransaction(async (transaction) => {
   const currentResult = await transaction.request().input('id', sql.Int, id).query(`SELECT a.*,s.BaseDurationMinutes,s.RequiresQueue FROM Appointments a WITH (UPDLOCK,HOLDLOCK) JOIN Services s ON s.Id=a.ServiceId WHERE a.Id=@id`);
   const current = currentResult.recordset[0];
-  if (!current) throw new AppError('Appointment was not found.', 404, 'APPOINTMENT_NOT_FOUND');
-  if (!ACTIVE_APPOINTMENT_STATUSES.includes(current.Status)) throw new AppError('Only active appointments can be rescheduled.', 409, 'APPOINTMENT_NOT_RESCHEDULABLE');
+  if (!current) throw new AppError('الموعد غير موجود أو تم حذفه.', 404, 'APPOINTMENT_NOT_FOUND');
+  if (!ACTIVE_APPOINTMENT_STATUSES.includes(current.Status)) throw new AppError('لا يمكن إعادة جدولة هذا الموعد لأن حالته الحالية لا تسمح بذلك.', 409, 'APPOINTMENT_NOT_RESCHEDULABLE');
   const context = await loadScheduleContext(transaction.request(), current.DoctorId, current.ServiceId, startAt);
   validateBookableTime({ context, startAt });
   const endAt = new Date(new Date(startAt).getTime() + current.BaseDurationMinutes * 60000);
   const overlap = await transaction.request().input('id', sql.Int, id).input('doctorId', sql.Int, current.DoctorId).input('startAt', sql.DateTime2, startAt).input('endAt', sql.DateTime2, endAt).query(`SELECT TOP 1 Id FROM Appointments WITH (UPDLOCK,HOLDLOCK) WHERE Id<>@id AND DoctorId=@doctorId AND Status IN (N'booked',N'confirmed',N'arrived',N'waiting',N'in_consultation',N'late') AND StartAt<@endAt AND COALESCE(EndAt,DATEADD(MINUTE,ExpectedDurationMinutes,StartAt))>@startAt`);
-  if (overlap.recordset[0]) throw new AppError('The selected time overlaps an existing appointment.', 409, 'OVERLAPPING_BOOKING');
+  if (overlap.recordset[0]) throw new AppError('هذا الموعد محجوز بالفعل. اختاري وقتًا آخر من المواعيد المتاحة.', 409, 'OVERLAPPING_BOOKING');
   const updated = await transaction.request().input('id', sql.Int, id).input('startAt', sql.DateTime2, startAt).input('endAt', sql.DateTime2, endAt).query('UPDATE Appointments SET StartAt=@startAt,EndAt=@endAt,UpdatedAt=SYSUTCDATETIME() OUTPUT INSERTED.* WHERE Id=@id');
   if (current.RequiresQueue) {
     const queue = await transaction.request().input('appointmentId', sql.Int, id).query('SELECT TOP 1 Id,QueueDate FROM QueueEntries WITH (UPDLOCK,HOLDLOCK) WHERE AppointmentId=@appointmentId');

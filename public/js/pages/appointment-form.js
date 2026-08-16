@@ -4,6 +4,7 @@ import { appointmentService } from '../services/appointment-service.js';
 import { auth } from '../core/auth.js';
 import { makeSlots } from '../utils/appointment-slots.mjs';
 import { escapeHtml, debounce, loadingButton, toast, emptyState, localDateKey } from '../core/ui.js';
+import { bookingErrorText, showBookingError } from '../core/booking-messages.js';
 
 const localToIso = (value) => new Date(value).toISOString();
 const positiveId = (value) => {
@@ -209,7 +210,7 @@ export async function render(outlet) {
         startAtField.value = button.dataset.slot;
       }));
     } catch (error) {
-      box.innerHTML = `<div class="text-xs text-red-600">${escapeHtml(error.message)}</div>`;
+      box.innerHTML = `<div class="rounded-lg border border-red-100 bg-red-50 p-3 text-xs text-red-700">${escapeHtml(bookingErrorText(error))}</div>`;
     }
   };
 
@@ -245,7 +246,7 @@ export async function render(outlet) {
         startAtField.value = '';
         await updateSlots();
       }
-      window.Swal.fire({ icon: 'error', title: error.code === 'OVERLAPPING_BOOKING' ? 'الموعد لم يعد متاحًا' : 'تعذر إنشاء الحجز', text: error.message });
+      showBookingError(error);
     } finally { loadingButton(button, false); }
   });
   outlet.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));

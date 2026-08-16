@@ -11,7 +11,7 @@ const dateKey = (value) => clinicDateKey(value || Date.now());
 const create = async (body, req) => {
   try {
     const isPatient = req.user?.role === 'patient';
-    if (isPatient && !req.user.patientId) throw new AppError('This account is not linked to a patient record.', 403, 'PATIENT_ACCOUNT_UNLINKED');
+    if (isPatient && !req.user.patientId) throw new AppError('هذا الحساب غير مرتبط بملف مريضة نشط. استخدمي الحجز العام أو تواصلي مع الاستقبال.', 403, 'PATIENT_ACCOUNT_UNLINKED');
     const payload = {
       ...body,
       patientId: isPatient ? req.user.patientId : body.patientId,
@@ -19,7 +19,7 @@ const create = async (body, req) => {
       notes: isPatient ? null : body.notes,
       createdBy: req.user.id
     };
-    if (isPatient && new Date(payload.startAt).getTime() <= Date.now()) throw new AppError('Patient self-booking must be for a future time.', 409, 'PATIENT_BOOKING_IN_PAST');
+    if (isPatient && new Date(payload.startAt).getTime() <= Date.now()) throw new AppError('لا يمكن للمريضة حجز موعد مضى. اختاري تاريخًا ووقتًا مستقبليًا.', 409, 'PATIENT_BOOKING_IN_PAST');
     const appointment = await repository.create(payload);
     if (appointment.DoctorId) await queueService.emitRecalculated(appointment.DoctorId, dateKey(appointment.StartAt));
     try { await enqueueBookingConfirmed(await repository.getById(appointment.Id)); } catch (_) { /* notification failure must not roll back a valid booking */ }
@@ -28,7 +28,7 @@ const create = async (body, req) => {
     return appointment;
   } catch (error) {
     if (error.number === 2601 || error.number === 2627) {
-      throw new AppError('This appointment is already reserved for the selected doctor.', 409, 'DOUBLE_BOOKING');
+      throw new AppError('الموعد لم يعد متاحًا؛ تم حجزه بالفعل مع الطبيب المختار. اختاري وقتًا آخر.', 409, 'DOUBLE_BOOKING');
     }
     throw error;
   }
@@ -36,7 +36,7 @@ const create = async (body, req) => {
 
 const reschedule = async (id, body, req) => {
   const before = await repository.getById(id);
-  if (!before) throw new AppError('Appointment was not found.', 404, 'APPOINTMENT_NOT_FOUND');
+  if (!before) throw new AppError('الموعد غير موجود أو تم حذفه.', 404, 'APPOINTMENT_NOT_FOUND');
   const appointment = await repository.reschedule(id, body.startAt);
   if (dateKey(before.StartAt) !== dateKey(appointment.StartAt)) await queueService.emitRecalculated(appointment.DoctorId, dateKey(before.StartAt));
   await queueService.emitRecalculated(appointment.DoctorId, dateKey(appointment.StartAt));
@@ -47,7 +47,7 @@ const reschedule = async (id, body, req) => {
 
 const updateStatus = async (id, body, req) => {
   const appointment = await repository.updateStatus(id, body.status, body.reason);
-  if (!appointment) throw new AppError('Appointment was not found.', 404, 'APPOINTMENT_NOT_FOUND');
+  if (!appointment) throw new AppError('الموعد غير موجود أو تم حذفه.', 404, 'APPOINTMENT_NOT_FOUND');
   if (appointment.DoctorId) await queueService.emitRecalculated(appointment.DoctorId, dateKey(appointment.StartAt));
   await recordAudit({ req, action: 'status_change', entity: 'appointment', entityId: id, newValue: appointment });
   emitClinicEvent('appointment:updated', { appointmentId: id, status: appointment.Status }, appointment.DoctorId);

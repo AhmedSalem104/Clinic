@@ -2,6 +2,7 @@ import { publicBookingService } from './services/public-booking-service.js';
 import { makeSlots } from './utils/appointment-slots.mjs';
 import { clockMinutes } from './utils/time.mjs';
 import { escapeHtml, formatMoney, localDateKey, loadingButton } from './core/ui.js';
+import { bookingErrorText, showBookingError } from './core/booking-messages.js';
 
 const form = document.querySelector('#public-booking-form');
 const doctorField = form?.elements.doctorId;
@@ -256,7 +257,7 @@ const updateSlots = async () => {
   } catch (error) {
     if (requestId !== slotRequestId) return;
     slotsHelper.textContent = 'تعذر تحميل المواعيد.';
-    slotsBox.innerHTML = `<div class="booking-slots-empty"><strong class="text-red-600">تعذر تحميل المواعيد</strong><small>${escapeHtml(error.message || 'حاولي مرة أخرى.')}</small></div>`;
+    slotsBox.innerHTML = `<div class="booking-slots-empty"><strong class="text-red-600">تعذر تحميل المواعيد</strong><small>${escapeHtml(bookingErrorText(error))}</small></div>`;
   }
 };
 
@@ -287,7 +288,7 @@ renderOptions().catch((error) => {
   doctorField.disabled = true;
   doctorHelper.textContent = 'تعذر تحميل قائمة الأطباء. حاولي تحديث الصفحة.';
   renderServices([]);
-  showStatus(error.message || 'تعذر تحميل بيانات الحجز. حاولي تحديث الصفحة.', 'error');
+  showStatus(bookingErrorText(error), 'error');
 });
 
 doctorField.addEventListener('change', async () => {
@@ -307,7 +308,7 @@ doctorField.addEventListener('change', async () => {
     } catch (error) {
       if (requestId !== doctorOptionsRequestId) return;
       renderServices([]);
-      slotsBox.innerHTML = `<div class="booking-slots-empty"><strong class="text-red-600">تعذر تحميل الخدمات</strong><small>${escapeHtml(error.message || 'حاولي مرة أخرى.')}</small></div>`;
+      slotsBox.innerHTML = `<div class="booking-slots-empty"><strong class="text-red-600">تعذر تحميل الخدمات</strong><small>${escapeHtml(bookingErrorText(error))}</small></div>`;
     }
   }
   await updateSlots();
@@ -336,7 +337,8 @@ form.addEventListener('submit', async (event) => {
     renderConfirmation(booking);
   } catch (error) {
     if (['OVERLAPPING_BOOKING', 'DOUBLE_BOOKING', 'DOCTOR_PAUSED', 'SCHEDULE_UNAVAILABLE'].includes(error.code)) await updateSlots();
-    showStatus(error.message || 'تعذر تأكيد الحجز. اختاري موعدًا آخر وحاولي مرة أخرى.');
+    const info = showBookingError(error);
+    showStatus(`${info.message} ${info.action}`);
   } finally {
     loadingButton(submitButton, false);
   }

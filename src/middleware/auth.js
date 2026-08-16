@@ -59,7 +59,7 @@ const requireAppointmentCreate = (req, _res, next) => {
     req.body = { ...req.body, patientId: req.user.patientId, bookingSource: 'online', notes: null };
     return next();
   }
-  return next(new AppError('Appointment booking is not allowed for this account.', 403, 'FORBIDDEN'));
+  return next(new AppError('هذا الحساب لا يملك صلاحية إنشاء حجز بهذه الطريقة.', 403, 'FORBIDDEN'));
 };
 
 const isOwner = (req) => req.user?.role === ROLES.OWNER;
