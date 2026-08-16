@@ -63,7 +63,7 @@ const updateProgress = () => {
   const basicComplete = Boolean(fullNameField.value.trim() && phoneField.value.trim());
   const appointmentComplete = Boolean(doctorField.value && serviceField.value && dateField.value);
   const timeComplete = Boolean(slotField.value);
-  const activeStep = timeComplete ? 3 : appointmentComplete ? 3 : basicComplete ? 2 : 1;
+  const activeStep = timeComplete ? 3 : appointmentComplete ? 2 : basicComplete ? 2 : 1;
   progressSteps.forEach((step) => {
     const number = Number(step.dataset.bookingStep);
     step.classList.toggle('is-active', number === activeStep);
