@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>متابعة الدور</title>
+  <title>متابعة الدور | عيادتي</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/tailwind.css">
   <link rel="stylesheet" href="/css/app.css">
-  <style>body{font-family:Cairo,system-ui;background:#f8fafc;color:#0f172a}.surface{background:#fff;border:1px solid #e2e8f0;border-radius:16px}</style>
 </head>
-<body>
-  <main class="mx-auto flex min-h-screen max-w-md items-center px-4 py-8">
-    <section class="surface w-full p-6 shadow-sm">
-      <div class="mb-6 flex items-center gap-3"><div class="grid h-11 w-11 place-items-center rounded-xl bg-blue-600 text-2xl font-bold text-white">+</div><div><div class="font-bold">عيادتي</div><div class="text-xs text-slate-500">متابعة الدور</div></div></div>
-      <div id="queue-status" class="text-center"><div class="animate-pulse text-sm text-slate-500">جاري تحميل حالة الدور…</div></div>
-      <p class="mt-6 text-center text-xs leading-6 text-slate-500">الوقت المتوقع نطاق تقريبي ويتغير حسب مدة الكشف الفعلية وتوقف الطبيب.</p>
+<body class="queue-tracking-page">
+  <main class="queue-tracking-shell">
+    <section class="queue-tracking-card" aria-labelledby="queue-page-title">
+      <header class="queue-tracking-header">
+        <a class="queue-brand" href="/" aria-label="العودة إلى عيادتي"><span class="queue-brand-mark">+</span><span><strong>عيادتي</strong><small>متابعة الدور</small></span></a>
+        <span class="queue-live-chip"><i aria-hidden="true"></i> تحديث حي</span>
+      </header>
+      <div id="queue-status" class="queue-tracking-content">
+        <div class="queue-loading-state"><span class="queue-loading-orbit" aria-hidden="true"></span><strong id="queue-page-title">جاري تحميل حالة الدور</strong><span>يتم جلب آخر تحديث من العيادة…</span></div>
+      </div>
+      <footer class="queue-tracking-footer"><span>الوقت المتوقع نطاق تقريبي</span><span>يتحدث تلقائيًا كل عدة ثوانٍ</span></footer>
     </section>
   </main>
   <script defer src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-  <script type="module" src="/js/public-queue.js?v=20260815-crud2"></script>
+  <script type="module" src="/js/public-queue.js?v=20260816-queue-ui1"></script>
 </body>
 </html>
