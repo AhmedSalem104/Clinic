@@ -4,14 +4,14 @@ const BOOKING_MESSAGES = Object.freeze({
   OVERLAPPING_BOOKING: {
     icon: 'warning',
     title: 'الموعد لم يعد متاحًا',
-    message: 'تم حجز هذا الوقت قبل تأكيد الحجز.',
-    action: 'اختاري موعدًا آخر من الأوقات المتاحة؛ تم تحديث القائمة تلقائيًا.'
+    message: 'الموعد الذي اخترته تم حجزه للتو من مستخدم آخر.',
+    action: 'اختاري وقتًا آخر من المواعيد الظاهرة؛ تم تحديث القائمة تلقائيًا.'
   },
   DOUBLE_BOOKING: {
     icon: 'warning',
     title: 'الموعد محجوز بالفعل',
-    message: 'يوجد حجز مؤكد في هذا الوقت مع الطبيب المختار.',
-    action: 'اختاري وقتًا آخر من القائمة المتاحة.'
+    message: 'تم حجز هذا الموعد قبل اكتمال طلبك.',
+    action: 'اختاري وقتًا آخر من القائمة؛ المواعيد المتاحة محدثة الآن.'
   },
   SERVICE_NOT_AVAILABLE: {
     icon: 'info',
@@ -120,7 +120,8 @@ const BOOKING_MESSAGES = Object.freeze({
 const hasArabic = (value) => /[\u0600-\u06FF]/.test(String(value || ''));
 
 export const getBookingMessage = (error) => {
-  const known = BOOKING_MESSAGES[error?.code];
+  const conflict = Number(error?.status) === 409 || /^(?:conflict|conflict\s+409|409(?:\s+conflict)?)$/i.test(String(error?.message || '').trim());
+  const known = BOOKING_MESSAGES[error?.code] || (conflict ? BOOKING_MESSAGES.DOUBLE_BOOKING : null);
   if (known) return { ...known, code: error.code };
 
   const message = hasArabic(error?.message) ? error.message : 'تعذر إتمام الحجز الآن.';

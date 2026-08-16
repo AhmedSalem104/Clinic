@@ -10,6 +10,22 @@ export class ApiError extends Error {
 
 const controllers = new Map();
 
+const isTechnicalErrorMessage = (value) => {
+  const message = String(value || '').trim();
+  return !message || /^(?:conflict|conflict\s+409|409|409\s+conflict|http\s+409|request failed)$/i.test(message);
+};
+
+const isBookingPath = (path) => /^\/(?:appointments(?:\/|$)|public\/booking(?:\/|$))/.test(String(path || ''));
+
+const normalizeRequestError = ({ path, status, code, message }) => {
+  if (!isTechnicalErrorMessage(message)) return message;
+  if (status === 409 && (code === 'OVERLAPPING_BOOKING' || code === 'DOUBLE_BOOKING' || isBookingPath(path))) {
+    return 'الموعد الذي اخترته لم يعد متاحًا؛ تم حجزه للتو. اختاري وقتًا آخر من المواعيد الظاهرة، وسيتم تحديث القائمة تلقائيًا.';
+  }
+  if (status === 409) return 'تعذر إتمام العملية لأن البيانات تغيرت أثناء الحفظ. حدّثي القائمة وحاولي مرة أخرى.';
+  return message || 'تعذر تنفيذ الطلب.';
+};
+
 const request = async (path, options = {}) => {
   const { method = 'GET', body, signal, requestKey, headers = {} } = options;
   if (requestKey && controllers.has(requestKey)) controllers.get(requestKey).abort();
@@ -30,7 +46,9 @@ const request = async (path, options = {}) => {
     const payload = contentType.includes('application/json') ? await response.json() : await response.text();
     if (!response.ok || (payload && payload.success === false)) {
       const error = payload?.error || {};
-      throw new ApiError(error.message || 'تعذر تنفيذ الطلب.', response.status, error.code, error.details);
+      const code = error.code || (response.status === 409 && isBookingPath(path) ? 'DOUBLE_BOOKING' : undefined);
+      const message = normalizeRequestError({ path, status: response.status, code, message: error.message || (typeof payload === 'string' ? payload : '') });
+      throw new ApiError(message, response.status, code, error.details);
     }
     return payload?.meta ? payload : (payload?.data ?? payload);
   } finally {
