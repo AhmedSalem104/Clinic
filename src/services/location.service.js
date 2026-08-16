@@ -84,11 +84,18 @@ const resolveBookingLocation = async (body = {}) => {
   const geocoded = clientAddress
     ? { displayName: clientAddress, details: clientDetails }
     : await reverseGeocode(coordinates);
+  const addressSource = clientAddress
+    ? body.locationAddressSource
+    : geocoded
+      ? 'reverse_geocoded'
+      : manualAddress
+        ? 'manual'
+        : 'browser_geolocation';
   const capturedAtValue = body.locationCapturedAt ? new Date(body.locationCapturedAt) : new Date();
   const capturedAt = Number.isNaN(capturedAtValue.getTime()) ? new Date() : capturedAtValue;
   return {
     address: geocoded?.displayName || manualAddress || coordinateAddress(coordinates),
-    addressSource: geocoded ? 'reverse_geocoded' : manualAddress ? 'manual' : 'browser_geolocation',
+    addressSource,
     latitude: coordinates.latitude,
     longitude: coordinates.longitude,
     accuracy: coordinates.accuracy,

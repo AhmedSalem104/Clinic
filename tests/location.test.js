@@ -32,3 +32,14 @@ test('the address preview from the booking form is preserved with its structured
   assert.equal(result.latitude, 30.0444);
   assert.deepEqual(JSON.parse(result.detailsJson), { road: 'ميدان التحرير', city: 'القاهرة', country: 'مصر' });
 });
+
+test('a manually edited address remains manual even when location coordinates are attached', async () => {
+  const result = await resolveBookingLocation({
+    address: 'العنوان الذي كتبته المريضة',
+    locationAddressSource: 'manual',
+    locationLatitude: '30.0444',
+    locationLongitude: '31.2357'
+  });
+  assert.equal(result.address, 'العنوان الذي كتبته المريضة');
+  assert.equal(result.addressSource, 'manual');
+});
