@@ -3,94 +3,153 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="حجز موعد في عيادة النساء والتوليد بدون تسجيل دخول" />
+    <meta name="description" content="احجزي موعدك في عيادة النساء والتوليد بدون تسجيل دخول" />
     <title>حجز موعد | عيادتي</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/css/tailwind.css" />
-    <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/tailwind.css?v=20260816-booking" />
+    <link rel="stylesheet" href="/css/app.css?v=20260816-booking" />
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
-  <body class="bg-slate-50 text-slate-900">
-    <main class="mx-auto min-h-screen max-w-5xl px-4 py-6 sm:px-6 lg:py-12">
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <a href="/" class="flex items-center gap-3 text-sm font-bold text-slate-900"><span class="brand-mark">+</span> عيادتي</a>
-        <div class="flex items-center gap-3 text-xs font-semibold">
-          <a href="/" class="page-link">تسجيل الدخول</a>
-          <a href="/patient-register.html" class="page-link">إنشاء حساب لاحقًا</a>
+  <body class="booking-page">
+    <main class="booking-portal">
+      <header class="booking-topbar">
+        <a href="/" class="booking-brand" aria-label="العودة إلى عيادتي">
+          <span class="booking-brand-mark" aria-hidden="true">+</span>
+          <span class="booking-brand-copy"><strong>عيادتي</strong><small>حجز موعد المريضة</small></span>
+        </a>
+        <div class="booking-topbar-actions">
+          <span class="booking-security-note">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.6-2.9 8.3-7 10-4.1-1.7-7-5.4-7-10V6l7-3Z"/><path d="m9.5 12 1.7 1.7 3.5-3.5"/></svg>
+            حجز واضح وآمن
+          </span>
+          <a href="/" class="booking-back-link">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            العودة للرئيسية
+          </a>
         </div>
-      </div>
+      </header>
 
-      <section id="booking-shell" class="grid gap-6 lg:grid-cols-[1fr_330px]">
-        <div class="card overflow-hidden">
-          <div class="border-b border-slate-100 bg-blue-50 px-5 py-7 sm:px-8">
-            <div class="mb-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700"><span aria-hidden="true">●</span> حجز عام بدون تسجيل دخول</div>
-            <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl">احجزي موعدك بسهولة</h1>
-            <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">اختاري الطبيب والخدمة والموعد المتاح. سيظهر لك رقم الحجز ورقم الدور ورابط متابعة الوقت المتوقع.</p>
-          </div>
-          <form id="public-booking-form" class="p-5 sm:p-8">
-            <div id="booking-status" class="mb-5 hidden rounded-lg p-3 text-sm" role="status"></div>
-            <div class="form-grid">
-              <div>
-                <label class="form-label" for="fullName">الاسم الكامل <span class="text-red-500">*</span></label>
-                <input class="input" id="fullName" name="fullName" autocomplete="name" maxlength="180" required />
-              </div>
-              <div>
-                <label class="form-label" for="phone">رقم الهاتف <span class="text-red-500">*</span></label>
-                <input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" required />
-                <div class="form-hint">سيستخدمه فريق الاستقبال للعثور على الحجز عند الوصول.</div>
-              </div>
-              <div>
-                <label class="form-label" for="doctorId">الطبيب <span class="text-red-500">*</span></label>
-                <select class="select" id="doctorId" name="doctorId" required><option value="">جاري تحميل الأطباء…</option></select>
-              </div>
-              <div>
-                <label class="form-label" for="serviceId">الخدمة <span class="text-red-500">*</span></label>
-                <select class="select" id="serviceId" name="serviceId" required><option value="">اختاري الخدمة</option></select>
-              </div>
-              <div>
-                <label class="form-label" for="date">التاريخ <span class="text-red-500">*</span></label>
-                <input class="input" id="date" name="date" type="date" required />
-              </div>
-              <div>
-                <label class="form-label" for="dateOfBirth">تاريخ الميلاد</label>
-                <input class="input" id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday" />
-              </div>
-              <div class="span-2">
-                <label class="form-label">المواعيد المتاحة <span class="text-red-500">*</span></label>
-                <div id="available-slots" class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5"><div class="col-span-full rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500">اختاري الطبيب والخدمة والتاريخ.</div></div>
-                <input type="hidden" id="startAt" name="startAt" required />
-              </div>
-              <div class="span-2">
-                <div id="price-box"></div>
-              </div>
-            </div>
-            <label class="mt-6 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-              <input class="mt-1" type="checkbox" name="consent" required />
-              <span>أوافق على استخدام بيانات التواصل لإدارة هذا الموعد. لا يتم تسجيل بيانات طبية في الحجز العام، ويستكمل الريسبشن البيانات عند الزيارة.</span>
-            </label>
-            <button id="submit-booking" class="btn btn-primary mt-6 w-full sm:w-auto" type="submit">تأكيد الحجز</button>
-          </form>
+      <section class="booking-intro" aria-labelledby="booking-page-title">
+        <div class="booking-intro-copy">
+          <span class="booking-eyebrow"><span aria-hidden="true"></span> حجز المريضة</span>
+          <h1 id="booking-page-title">احجزي موعدك في <span>خطوات واضحة</span></h1>
+          <p>اختاري الطبيب والخدمة والموعد المناسب لك. لا تحتاجين إلى تسجيل دخول أو رمز تحقق في أول حجز.</p>
         </div>
-        <aside class="space-y-4">
-          <section class="card p-5">
-            <h2 class="font-semibold text-slate-900">كيف يتم الحجز؟</h2>
-            <ol class="mt-4 space-y-4 text-sm leading-6 text-slate-600">
-              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">1</span><span>اكتبي الاسم ورقم الهاتف.</span></li>
-              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">2</span><span>اختاري الطبيب والخدمة والموعد المتاح.</span></li>
-              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">3</span><span>احتفظي برقم الحجز ورقم الدور ورابط المتابعة.</span></li>
-              <li class="flex gap-3"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">4</span><span>عند الوصول، يكمل الريسبشن باقي بيانات الملف.</span></li>
-            </ol>
+        <div class="booking-intro-card">
+          <span class="booking-intro-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18M8 15h3M8 18h6"/></svg>
+          </span>
+          <span><strong>الحجز الأول بدون حساب</strong><small>سجلي موعدك الآن، ويمكنك إنشاء حساب لاحقًا لمتابعة الدور.</small></span>
+        </div>
+      </section>
+
+      <section id="booking-shell" class="booking-layout" aria-label="نموذج حجز الموعد">
+        <section class="booking-form-card">
+          <div class="booking-card-header">
+            <div class="booking-card-heading">
+              <span class="booking-section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+              </span>
+              <div><span class="booking-card-kicker">نموذج الحجز</span><h2>اختاري الموعد المناسب</h2></div>
+            </div>
+            <span class="booking-required-note"><b>*</b> بيانات مطلوبة</span>
+          </div>
+
+          <nav class="booking-progress" aria-label="مراحل الحجز">
+            <div class="booking-progress-step is-active" data-booking-step="1"><span>1</span><div><strong>بياناتك الأساسية</strong><small>الاسم والهاتف</small></div></div>
+            <i aria-hidden="true"></i>
+            <div class="booking-progress-step" data-booking-step="2"><span>2</span><div><strong>الموعد والخدمة</strong><small>الطبيب والتاريخ</small></div></div>
+            <i aria-hidden="true"></i>
+            <div class="booking-progress-step" data-booking-step="3"><span>3</span><div><strong>اختيار الوقت</strong><small>تأكيد الحجز</small></div></div>
+          </nav>
+
+          <form id="public-booking-form" class="booking-form">
+            <div id="booking-status" class="booking-status hidden" role="status" aria-live="polite"></div>
+
+            <fieldset class="booking-section" data-booking-section="1">
+              <legend class="sr-only">بيانات المريضة</legend>
+              <div class="booking-section-heading"><span>01</span><div><h3>بيانات المريضة</h3><p>نحتاج بيانات بسيطة ليتعرف عليك فريق الاستقبال عند الوصول.</p></div></div>
+              <div class="booking-fields-grid">
+                <div class="booking-field booking-field-wide-mobile">
+                  <label class="form-label" for="fullName">الاسم الكامل <span class="required-mark">*</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5"/></svg><input class="input" id="fullName" name="fullName" autocomplete="name" maxlength="180" placeholder="اكتبي الاسم كما تحبين أن يظهر في الحجز" required /></div>
+                </div>
+                <div class="booking-field">
+                  <label class="form-label" for="phone">رقم الهاتف <span class="required-mark">*</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9 6h6M10 18h4"/></svg><input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" placeholder="01xxxxxxxxx" required /></div>
+                  <div class="form-hint">سيستخدمه فريق الاستقبال للعثور على الحجز عند وصولك.</div>
+                </div>
+                <div class="booking-field">
+                  <label class="form-label" for="dateOfBirth">تاريخ الميلاد <span class="booking-optional">اختياري</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18"/></svg><input class="input" id="dateOfBirth" name="dateOfBirth" type="date" autocomplete="bday" /></div>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="booking-section" data-booking-section="2">
+              <legend class="sr-only">تفاصيل الموعد</legend>
+              <div class="booking-section-heading"><span>02</span><div><h3>تفاصيل الموعد</h3><p>اختاري الطبيب والخدمة ثم اليوم الذي يناسبك.</p></div></div>
+              <div class="booking-fields-grid">
+                <div class="booking-field">
+                  <label class="form-label" for="doctorId">الطبيب <span class="required-mark">*</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15 20v-1.5a4.5 4.5 0 0 0-9 0V20M10.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM16 4.5h5M18.5 2v5"/><path d="M14.5 11.5a4 4 0 0 1 6.5 3.1V20"/></svg><select class="select" id="doctorId" name="doctorId" required><option value="">جاري تحميل الأطباء…</option></select></div>
+                </div>
+                <div class="booking-field">
+                  <label class="form-label" for="serviceId">الخدمة <span class="required-mark">*</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg><select class="select" id="serviceId" name="serviceId" required><option value="">اختاري الخدمة</option></select></div>
+                </div>
+                <div class="booking-field booking-field-date">
+                  <label class="form-label" for="date">تاريخ الزيارة <span class="required-mark">*</span></label>
+                  <div class="booking-input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg><input class="input" id="date" name="date" type="date" required /></div>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="booking-section booking-section-slots" data-booking-section="3">
+              <legend class="sr-only">اختيار وقت الموعد</legend>
+              <div class="booking-section-heading"><span>03</span><div><h3>اختاري وقت الموعد</h3><p>المواعيد المعروضة متاحة فعليًا حسب جدول الطبيب.</p></div></div>
+              <div class="booking-slots-panel">
+                <div class="booking-slots-header"><div><strong>المواعيد المتاحة</strong><span id="slots-helper">اختاري الطبيب والخدمة والتاريخ أولًا.</span></div><span class="booking-live-dot"><i></i> محدث الآن</span></div>
+                <div id="available-slots" class="booking-slots-grid"><div class="booking-slots-empty"><span class="booking-slots-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 10h18"/></svg></span><strong>اختاري تفاصيل الموعد</strong><small>ستظهر هنا الأوقات المتاحة للحجز.</small></div></div>
+              </div>
+              <input type="hidden" id="startAt" name="startAt" />
+              <div id="price-box" class="booking-price-box"></div>
+            </fieldset>
+
+            <div class="booking-consent-row">
+              <label class="booking-checkbox"><input type="checkbox" name="consent" required /><span class="booking-checkbox-mark" aria-hidden="true">✓</span><span>أوافق على استخدام بيانات التواصل لإدارة هذا الموعد. لا يتم تسجيل بيانات طبية في الحجز العام، ويستكمل الريسبشن البيانات عند الزيارة.</span></label>
+            </div>
+            <div class="booking-submit-row"><div class="booking-submit-help"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 11v5M12 8h.01"/><circle cx="12" cy="12" r="9"/></svg><span>بعد التأكيد سيظهر لك رقم الحجز ورقم الدور.</span></div><button id="submit-booking" class="booking-submit-button" type="submit"><span>تأكيد الحجز</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+          </form>
+        </section>
+
+        <aside class="booking-aside">
+          <section class="booking-summary-card" aria-labelledby="booking-summary-title">
+            <div class="booking-aside-heading"><span class="booking-aside-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span><div><span>قبل التأكيد</span><h2 id="booking-summary-title">ملخص الحجز</h2></div></div>
+            <div class="booking-summary-body">
+              <div class="booking-summary-row"><span>الطبيب</span><strong id="summary-doctor">لم يتم الاختيار</strong></div>
+              <div class="booking-summary-row"><span>الخدمة</span><strong id="summary-service">لم يتم الاختيار</strong></div>
+              <div class="booking-summary-row"><span>التاريخ</span><strong id="summary-date">لم يتم الاختيار</strong></div>
+              <div class="booking-summary-row"><span>الوقت</span><strong id="summary-time" class="summary-muted">اختاري وقتًا متاحًا</strong></div>
+              <div class="booking-summary-total"><span>السعر المتوقع</span><strong id="summary-price">—</strong></div>
+            </div>
+            <div class="booking-summary-foot"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 19 6v5c0 4.6-2.9 8.3-7 10-4.1-1.7-7-5.4-7-10V6l7-3Z"/><path d="M9.5 12 11.2 13.7 14.8 10"/></svg><span>بياناتك محفوظة لإتمام الحجز فقط، ولا نطلب بيانات طبية في هذه الخطوة.</span></div>
           </section>
-          <section class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
-            <strong>مهم</strong>
-            <p class="mt-1">لا نطلب تسجيل دخول أو رمز تحقق للحجز الأول. يمكنك إنشاء حساب لاحقًا باستخدام معرّف المريضة لمتابعة مواعيدك ودورك.</p>
+
+          <section class="booking-how-card">
+            <div class="booking-aside-heading"><span class="booking-aside-icon is-soft" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/><path d="M17 3h4v4"/></svg></span><div><span>بكل بساطة</span><h2>كيف يتم الحجز؟</h2></div></div>
+            <ol class="booking-how-list"><li><b>01</b><span>أدخلي الاسم ورقم الهاتف.</span></li><li><b>02</b><span>اختاري الطبيب والخدمة.</span></li><li><b>03</b><span>حددي اليوم والوقت المناسب.</span></li><li><b>04</b><span>احتفظي برقم الحجز وتابعي دورك.</span></li></ol>
           </section>
+
+          <section class="booking-account-card"><span class="booking-account-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-3.3 3.2-5 7-5s6.3 1.7 7 5"/><path d="M19 5v4M17 7h4"/></svg></span><div><strong>تريدين المتابعة لاحقًا؟</strong><p>أنشئي حسابًا بعد الحجز باستخدام معرّف المريضة لمتابعة مواعيدك ودورك.</p><a href="/patient-register.html">إنشاء حساب لاحقًا <span aria-hidden="true">←</span></a></div></section>
         </aside>
       </section>
+
       <section id="booking-confirmation" class="hidden"></section>
+      <footer class="booking-footer"><span>عيادتي · حجز مواعيد النساء والتوليد</span><span>لا يتم طلب OTP للحجز الأول</span></footer>
     </main>
-    <script type="module" src="/js/public-booking.js?v=20260815-booking3"></script>
+    <script type="module" src="/js/public-booking.js?v=20260816-booking"></script>
   </body>
 </html>
