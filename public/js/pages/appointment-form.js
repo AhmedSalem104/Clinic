@@ -6,12 +6,18 @@ import { makeSlots } from '../utils/appointment-slots.mjs';
 import { escapeHtml, debounce, loadingButton, toast, emptyState, localDateKey } from '../core/ui.js';
 
 const localToIso = (value) => new Date(value).toISOString();
+const positiveId = (value) => {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
 export async function render(outlet) {
   const query = new URLSearchParams(window.location.search);
   const currentUser = auth.user();
   const currentRole = String(currentUser?.role || '').trim().toLowerCase();
   const isPatientBooking = currentRole === 'patient';
   const queryPatient = isPatientBooking ? String(currentUser.patientId || '') : (query.get('patientId') || '');
+  let selectedPatientId = positiveId(queryPatient);
   const rescheduleId = isPatientBooking ? '' : (query.get('rescheduleId') || '');
   const requestedSource = isPatientBooking ? 'online' : (query.get('source') === 'walk_in' ? 'walk_in' : 'reception');
   const [doctors, services] = await Promise.all([
@@ -34,6 +40,7 @@ export async function render(outlet) {
       patientField.innerHTML = `<label class="form-label">المريضة</label><div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(currentUser.fullName)}</strong><span class="mx-2 text-blue-300">·</span>حسابك</div><input type="hidden" name="patientId" value="${escapeHtml(currentUser.patientId)}" />`;
     }
     patientIdField = form.elements.namedItem('patientId');
+    selectedPatientId = positiveId(currentUser.patientId);
     form.bookingSource.value = 'online';
     form.bookingSource.parentElement.classList.add('hidden');
     form.notes.closest('.span-2')?.classList.add('hidden');
@@ -52,16 +59,18 @@ export async function render(outlet) {
     slotsBox.parentElement.insertBefore(priceBox, slotsBox);
   }
   const showSelected = async (id) => {
-    if (!id) return;
+    const normalizedId = positiveId(id);
+    if (!normalizedId) return;
     try {
-      const patient = await patientService.get(id);
+      const patient = await patientService.get(normalizedId);
       document.querySelector('#selected-patient').innerHTML = `<div class="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.PatientCode)}<span class="mx-2 text-blue-300">·</span>${escapeHtml(patient.Phone)}</div>`;
     } catch (_) { /* keep the picker usable */ }
   };
   if (queryPatient && !isPatientBooking) await showSelected(queryPatient);
   if (rescheduleId) {
     const existing = await appointmentService.get(rescheduleId);
-    patientIdField.value = existing.PatientId;
+    selectedPatientId = positiveId(existing.PatientId);
+    patientIdField.value = selectedPatientId || '';
     form.doctorId.value = existing.DoctorId;
     form.serviceId.value = existing.ServiceId;
     form.date.value = localDateKey(existing.StartAt);
@@ -74,6 +83,7 @@ export async function render(outlet) {
 
   if (!isPatientBooking) patientInput.addEventListener('input', debounce(async () => {
     const search = patientInput.value.trim();
+    selectedPatientId = null;
     patientIdField.value = '';
     document.querySelector('#selected-patient').innerHTML = '';
     if (search.length < 2) { results.innerHTML = ''; return; }
@@ -81,7 +91,8 @@ export async function render(outlet) {
       const response = await patientService.list({ search, page: 1, pageSize: 8 });
       results.innerHTML = (response.data || []).map((patient) => `<button type="button" class="block w-full rounded-lg border-b border-slate-100 p-3 text-right text-sm hover:bg-slate-50" data-patient-id="${patient.Id}"><strong>${escapeHtml(patient.FullName)}</strong><span class="mx-2 text-xs text-slate-400">${escapeHtml(patient.PatientCode)} · ${escapeHtml(patient.Phone)}</span></button>`).join('') || '<div class="p-3 text-xs text-slate-500">لا توجد مريضات مطابقة.</div>';
       results.querySelectorAll('[data-patient-id]').forEach((button) => button.addEventListener('click', () => {
-        patientIdField.value = button.dataset.patientId;
+        selectedPatientId = positiveId(button.dataset.patientId);
+        patientIdField.value = selectedPatientId || '';
         patientInput.value = '';
         results.innerHTML = '';
         showSelected(button.dataset.patientId);
@@ -120,7 +131,7 @@ export async function render(outlet) {
   form.date.addEventListener('change', updateSlots);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const patientId = isPatientBooking ? Number(currentUser?.patientId) : Number(patientIdField?.value);
+    const patientId = isPatientBooking ? positiveId(currentUser?.patientId) : (selectedPatientId || positiveId(patientIdField?.value));
     const selectedStartAt = startAtField?.value || '';
     if (!patientId || !selectedStartAt) {
       const missingMessage = !patientId
