@@ -489,6 +489,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .queue-next-row td { background: #fffbeb !important; }
 .queue-row-hint { display: block; margin-top: 3px; color: #0f766e; font-size: 10px; font-weight: 700; }
 .queue-next-row .queue-row-hint { color: #b45309; }
+.queue-action-panel { display: grid; grid-template-columns: minmax(78px, auto) minmax(150px, 1fr); align-items: start; gap: 12px; min-width: 280px; }
+.queue-action-cluster { display: grid; align-content: start; gap: 5px; }
+.queue-action-cluster > span { color: #94a3b8; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.queue-action-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.queue-action-icon, .queue-action-button { display: inline-flex; min-height: 28px; align-items: center; justify-content: center; border: 1px solid #dbe4ec; border-radius: 7px; padding: 4px 7px; background: #fff; color: #475569; cursor: pointer; font-size: 10px; font-weight: 700; transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease; }
+.queue-action-icon { width: 29px; padding: 4px; font-size: 14px; }
+.queue-action-icon:hover:not(:disabled) { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; transform: translateY(-1px); }
+.queue-action-button:hover { transform: translateY(-1px); }
+.queue-action-button.queue-action-arrive:hover, .queue-action-button.queue-action-waiting:hover { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+.queue-action-button.queue-action-current { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; }
+.queue-action-button.queue-action-current:hover { background: #ccfbf1; }
+.queue-action-button.queue-action-complete { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+.queue-action-button.queue-action-complete:hover { background: #dcfce7; }
+.queue-action-button.queue-action-late { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.queue-action-button.queue-action-danger { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+.queue-action-button.queue-action-skip { border-color: #e2e8f0; background: #f8fafc; color: #64748b; }
+.queue-action-icon:disabled { cursor: not-allowed; opacity: .45; }
+.queue-action-closed { display: inline-flex; min-height: 28px; align-items: center; color: #a0aec0; font-size: 10px; }
+.queue-action-buttons small { color: #cbd5e1; }
 
 /* Services catalog */
 .service-catalog-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 20px; border: 1px solid #dbeafe; border-radius: 16px; padding: 20px 22px; background: linear-gradient(115deg, #eff6ff, #ffffff 55%, #f0fdfa); }

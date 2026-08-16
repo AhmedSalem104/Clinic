@@ -17,6 +17,29 @@ const queueBoard = (rows) => {
   </section>`;
 };
 
+const statusChoices = [
+  ['arrived', 'تسجيل الوصول', 'queue-action-arrive'],
+  ['waiting', 'وضع انتظار', 'queue-action-waiting'],
+  ['in_consultation', 'بدء الكشف', 'queue-action-current'],
+  ['completed', 'إكمال الكشف', 'queue-action-complete'],
+  ['late', 'تسجيل تأخير', 'queue-action-late'],
+  ['no_show', 'لم تحضر', 'queue-action-danger'],
+  ['skipped', 'تجاوز الدور', 'queue-action-skip']
+];
+
+const queueActions = (row) => {
+  const canMove = activeStatuses.includes(row.Status);
+  const actions = statusChoices
+    .filter(([nextStatus]) => nextStatus !== row.Status && (nextStatus !== 'completed' || ['in_consultation', 'late'].includes(row.Status)))
+    .map(([nextStatus, label, className]) => `<button type="button" class="queue-action-button ${className}" data-status-id="${row.Id}" data-status="${nextStatus}">${label}</button>`)
+    .join('');
+  if (!canMove && !actions) return '<span class="queue-action-closed">لا توجد إجراءات</span>';
+  return `<div class="queue-action-panel">
+    <div class="queue-action-cluster"><span>ترتيب الدور</span><div class="queue-action-buttons">${canMove ? `<button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Math.max(1, Number(row.Position) - 1)}" ${Number(row.Position) <= 1 ? 'disabled' : ''} aria-label="تحريك لأعلى" title="تحريك لأعلى">↑</button><button type="button" class="queue-action-icon" data-move="${row.Id}" data-position="${Number(row.Position) + 1}" aria-label="تحريك لأسفل" title="تحريك لأسفل">↓</button>` : '<small>—</small>'}</div></div>
+    <div class="queue-action-cluster queue-status-cluster"><span>تحديث الحالة</span><div class="queue-action-buttons">${actions || '<small>—</small>'}</div></div>
+  </div>`;
+};
+
 export async function render(outlet) {
   const doctors = await clinicService.doctors({ page: 1, pageSize: 100 });
   const today = localDateKey();
@@ -41,7 +64,7 @@ export async function render(outlet) {
         const isCurrent = row.Status === 'in_consultation';
         const isNext = !isCurrent && row.Id === firstActiveId;
         const rowClass = isCurrent ? 'queue-current-row' : isNext ? 'queue-next-row' : '';
-        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${isCurrent ? '<small class="queue-row-hint">يُكشف الآن</small>' : isNext ? '<small class="queue-row-hint">التالي</small>' : ''}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${row.ExpectedStartAt ? `${formatDateTime(row.ExpectedStartAt)} – ${row.ExpectedEndAt ? formatDateTime(row.ExpectedEndAt) : '—'}` : 'جارٍ إعادة الحساب'}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td><div class="flex flex-wrap gap-1">${activeStatuses.includes(row.Status) ? `<button class="btn btn-ghost text-[11px]" data-move="${row.Id}" data-position="${Math.max(1, Number(row.Position) - 1)}" ${Number(row.Position) <= 1 ? 'disabled' : ''} aria-label="تحريك لأعلى">↑</button><button class="btn btn-ghost text-[11px]" data-move="${row.Id}" data-position="${Number(row.Position) + 1}" aria-label="تحريك لأسفل">↓</button>` : ''}${[['arrived', 'تسجيل الوصول'], ['waiting', 'انتظار'], ['in_consultation', 'بدء الكشف'], ['completed', 'إكمال الكشف'], ['late', 'متأخرة'], ['no_show', 'لم تحضر'], ['skipped', 'تجاوز']].filter(([status]) => status !== row.Status && (status !== 'completed' || ['in_consultation', 'late'].includes(row.Status))).map(([nextStatus, label]) => `<button class="btn btn-ghost text-[11px]" data-status-id="${row.Id}" data-status="${nextStatus}">${label}</button>`).join('')}</div></td></tr>`;
+        return `<tr class="${rowClass}"><td><span class="queue-number-pill ${isCurrent ? 'is-current' : isNext ? 'is-next' : ''}">#${row.QueueNumber}</span></td><td><a class="page-link" href="/patients/${row.PatientId}" data-route="/patients/${row.PatientId}">${escapeHtml(row.PatientName)}</a>${isCurrent ? '<small class="queue-row-hint">يُكشف الآن</small>' : isNext ? '<small class="queue-row-hint">التالي</small>' : ''}</td><td>${escapeHtml(row.ServiceName)}</td><td>${formatDateTime(row.AppointmentTime)}</td><td>${row.ExpectedStartAt ? `${formatDateTime(row.ExpectedStartAt)} – ${row.ExpectedEndAt ? formatDateTime(row.ExpectedEndAt) : '—'}` : 'جارٍ إعادة الحساب'}</td><td>${row.CheckedInAt && row.ConsultationStartedAt ? `${Math.max(0, Math.round((new Date(row.ConsultationStartedAt) - new Date(row.CheckedInAt)) / 60000))} دقيقة` : '—'}</td><td>${statusBadge(row.Status)}</td><td>${queueActions(row)}</td></tr>`;
       }).join('')}</tbody></table>` : emptyState('لا توجد مريضات في طابور هذا الطبيب وهذا التاريخ.');
       table.innerHTML = tableMarkup;
       table.querySelectorAll('[data-route]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); window.clinicApp.navigate(link.dataset.route); }));
