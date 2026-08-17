@@ -12,7 +12,10 @@
     "db:seed": "node scripts/seed.js",
     "db:ensure-booking-ready": "node scripts/ensure-active-doctor-booking.js",
     "test": "node --test",
-    "check": "node --check server.js && node --check src/app.js"
+    "check": "node --check server.js && node --check src/app.js",
+    "qa:gate": "node scripts/qa-gate.js",
+    "qa:gate:fast": "node scripts/qa-gate.js --skip-tests",
+    "qa:gate:json": "node scripts/qa-gate.js --json"
   },
   "engines": {
     "node": ">=20"

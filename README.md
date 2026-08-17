@@ -1066,3 +1066,24 @@ docs/medical-forms/
 npm test
 npm run db:migrate
 ```
+
+## QA Agent Control Plane
+
+تمت إضافة طبقة QA داخلية قابلة للتشغيل تضم عشرة وكلاء متخصصين: Supervisor، Security، Data Integrity، Booking، Queue، Medical Forms، UI/UX، Performance، QA Automation، وRelease.
+
+التشغيل:
+
+```powershell
+npm run qa:gate          # كل الفحوصات + الاختبارات
+npm run qa:gate:fast     # فحوصات العقود بدون تشغيل test suite
+npm run qa:gate:json     # تقرير JSON مناسب للـCI
+```
+
+هذه الطبقة read-only: لا تتصل بقاعدة البيانات مباشرة، ولا تنفذ migration أو حذفًا أو Deploy، ولا تطبع أسرارًا أو بيانات طبية. الفشل أو `needs_review` يمنع اعتبار الإصدار ناجحًا إلى أن تتم مراجعته.
+
+التوثيق الكامل:
+
+- [Agent Control Plane](docs/agents/README.md)
+- [Agent Operating Contract](docs/agents/AGENT_OPERATING_CONTRACT.md)
+- [Agent Test Matrix](docs/agents/TEST_MATRIX.md)
+- [Future System Prompts](docs/agents/SYSTEM_PROMPTS.md)
